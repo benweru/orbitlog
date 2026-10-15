@@ -1,0 +1,19 @@
+# The 15 root-cause classes from docs/plan.md section 4 (~8 instances each).
+version: 1
+classes:
+  - {id: 1,  name: oom_alloc_failure,       description: "Out-of-memory / allocation failure"}
+  - {id: 2,  name: i2c_sensor_nack,         description: "I2C/sensor NACK (driver unbind or i2c-stub)"}
+  - {id: 3,  name: disk_full,               description: "Disk full"}
+  - {id: 4,  name: readonly_filesystem,     description: "Read-only filesystem"}
+  - {id: 5,  name: thermal_throttling,      description: "Thermal throttling (fake sysfs values)"}
+  - {id: 6,  name: c_app_segfault,          description: "Segfault in a C app"}
+  - {id: 7,  name: payload_python_exception, description: "Python exception in the payload"}
+  - {id: 8,  name: corrupt_input_file,      description: "Corrupt input file"}
+  - {id: 9,  name: clock_jump_ntp_drift,    description: "Clock jump or NTP drift"}
+  - {id: 10, name: cfs_app_crash_restart,   description: "cFS app crash restarted by health checker"}
+  - {id: 11, name: sb_pipe_full,            description: "Full cFS software-bus pipe"}
+  - {id: 12, name: table_load_validation,   description: "cFS table-load validation failure"}
+  - {id: 13, name: watchdog_reset,          description: "Watchdog reset"}
+  - {id: 14, name: network_link_drop,       description: "Network/link drop"}
+  - {id: 15, name: cpu_starvation_deadline, description: "CPU-starvation deadline miss"}
+# Plus 10 "no_fault" cases in the test set to measure false alarms.

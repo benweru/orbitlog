@@ -1,0 +1,21 @@
+# venvs
+.venv/
+venv/
+env/
+# python
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+dist/
+.pytest_cache/
+# models
+models/
+*.gguf
+*.safetensors
+*.bin
+# data
+data/raw/
+data/interim/
+results/
+.env
