@@ -20,6 +20,22 @@ The repo is the only shared surface.
 - Scripts call `python` (the Makefile uses `PYTHON ?= python`).
 - Results must log a hardware and kernel fingerprint.
 
-## CI
-The workflow lives at `ci/test.yml` until it is moved to `.github/workflows/test.yml` (the bot token lacks `workflow` scope, so Ben adds it):
-`mkdir -p .github/workflows && git mv ci/test.yml .github/workflows/test.yml`
+## Naming conventions
+
+### Branches: `type/goal-in-kebab-case`
+The name says what the branch is for. Never use generic names like `phase-1`, `wip` or `ben-stuff`.
+- `feat/cfs-docker-image`
+- `feat/fault-injector-core`
+- `fix/cgroup-peak-memory-reading`
+- `exp/e2b-iq2-quant-grid`
+- `docs/repo-conventions-and-week1-brief`
+
+### Commits: Conventional Commits
+`type(optional-scope): short present-tense summary`, 72 characters or less. Add a body only when the reason isn't obvious.
+- `feat(cfs): add Dockerfile pinned to cFS v7.0.1`
+- `fix(memory): read memory.peak from the scope cgroup`
+- `exp(e1): run Q4_0 vs IQ2_M at 512 MiB on 60 test cases`
+- `docs: add week 1 task briefs`
+
+Types: `feat`, `fix`, `chore`, `docs`, `test`, `refactor`, `perf`, `exp` (benchmark and experiment runs).
+Branches use a slash (`feat/...`) and commits use a colon (`feat: ...`). PR titles follow the commit style.
