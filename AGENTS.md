@@ -22,3 +22,10 @@ Rules for every coding agent in this repo: Ben's Cursor CLI agent and Grok Bot.
 - **Never fabricate results or benchmark numbers.** Every number must come from a run that is logged and can be reproduced, with a hardware and kernel fingerprint.
 - Unimplemented code raises `NotImplementedError`. Never return placeholder data that looks real.
 - Pin dependency versions. Never commit models, `data/raw/` or virtualenvs.
+
+## Skills
+Project skills for Cursor live in `.cursor/skills/`:
+- `add-fault-class`: adding or implementing a fault class and its injector
+- `run-experiment`: pinned, memory-capped benchmark runs with raw results
+- `open-pr`: branch and commit conventions, test, then a PR with real logs
+- `write-task-brief`: the template for `docs/tasks/` briefs
