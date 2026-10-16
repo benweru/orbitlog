@@ -1,16 +1,18 @@
 """Faults that only exist inside the running cFS container.
 
 Each inject() writes label.json before trigger(). trigger() raises if the
-expected EVS line never appears, and the label stays trigger_status failed.
+expected EVS event (matched on app name and event ID) never appears, and the
+label stays trigger_status failed. Pass keep_container_log as inject()'s
+before_cleanup to keep the container log of a failed trigger.
 """
 from __future__ import annotations
 
 import random
-import time
 from pathlib import Path
 
 from orbitlog.cfs.cmd import (
-    SAMPLE_PIPE_DEPTH,
+    SLOW_APP_CMD_MID,
+    SLOW_APP_PIPE_DEPTH,
     TABLE_NAME,
     fault_app_exit_cmd,
     load_table_cmd,
@@ -28,6 +30,14 @@ BAD_TABLES = (
     (100, "/cf/b100.tbl"),
     (1000, "/cf/b1000.tbl"),
 )
+
+# cFE v7.0.1 event IDs (cfe_*_eventids.h in the image).
+CFE_TBL_FILE_LOADED_INF_EID = 12
+CFE_TBL_VALIDATION_ERR_EID = 96
+CFE_ES_RESTART_APP_INF_EID = 10
+CFE_ES_ERREXIT_APP_INF_EID = 14
+CFE_SB_Q_FULL_ERR_EID = 25
+APP_INIT_EID = 1  # fault_app.c and slow_app.c
 
 
 class _CfsFault(FaultInjector):
@@ -65,6 +75,15 @@ class _CfsFault(FaultInjector):
             self.container = None
 
 
+def keep_container_log(injector, out_dir: Path) -> None:
+    """before_cleanup hook: save container.log when collect() did not run."""
+    if not isinstance(injector, _CfsFault) or injector.container is None:
+        return
+    if (Path(out_dir) / "artefacts" / "container.log").exists():
+        return
+    injector.collect(Path(out_dir) / "artefacts")
+
+
 @register("table_load_validation")
 class TableLoadValidation(_CfsFault):
     component = "cfs.tbl.sample_app"
@@ -76,50 +95,37 @@ class TableLoadValidation(_CfsFault):
     def trigger(self) -> None:
         box = self._boot()
         self._send(box, load_table_cmd(self.params["filename"]))
-        time.sleep(0.5)
+        box.wait_for_event("CFE_TBL", CFE_TBL_FILE_LOADED_INF_EID, timeout_s=10, subject=self.params["filename"])
         self._send(box, validate_table_cmd())
-        box.wait_for("validation failed for")
+        box.wait_for_event("CFE_TBL", CFE_TBL_VALIDATION_ERR_EID, subject=TABLE_NAME)
 
 
 @register("sb_pipe_full")
 class SbPipeFull(_CfsFault):
-    """SAMPLE_APP NOOP burst.
+    """Burst of commands into SLOW_APP's depth-4 pipe.
 
-    The command pipe depth is 32. sample_app drains every queued command each
-    time it is scheduled, and stock ci_lab ingests only 11 packets per wakeup,
-    so a burst just above 32 never overflows. The image raises
-    CI_LAB_PLATFORM_MAX_INGEST_PKTS to 64. ci_lab priority (40) is higher than
-    sample_app (50), so one wakeup can enqueue more than 32 commands before
-    sample_app runs. The seeded count is 40 to 64, sent by /opt/orbitlog/burst
-    to 127.0.0.1:1234. On this machine sample_app still drains the pipe in
-    time, so trigger() raises and the label stays failed. It does not write
-    a Pipe Overflow line.
+    sample_app drains its depth-32 pipe faster than ci_lab can fill it, so
+    bursts at it never overflowed. slow_app (docker/cfs/slow_app.c) drains
+    its pipe only once every 5 s. The burst is sent in-container by
+    /opt/orbitlog/burst and is at least 2 * depth + 1 commands, so even if a
+    drain lands mid-burst one side still exceeds the depth. Success is the
+    CFE_SB Pipe Overflow event (ID 25) naming SLOW_APP's pipe.
     """
 
-    component = "cfs.sb.sample_app"
+    component = "cfs.sb.slow_app"
 
     def choose_params(self, rng: random.Random) -> dict:
         return {
-            "pipe_depth": SAMPLE_PIPE_DEPTH,
-            "noop_count": 40 + rng.randrange(0, 25),
-            "msg": "SAMPLE_APP NOOP",
+            "pipe_depth": SLOW_APP_PIPE_DEPTH,
+            "burst_count": 2 * SLOW_APP_PIPE_DEPTH + 1 + rng.randrange(0, 32),
+            "msg_id": f"0x{SLOW_APP_CMD_MID:04X}",
         }
 
     def trigger(self) -> None:
         box = self._boot()
-        # Host UDP was not enough. /opt/orbitlog/burst sends to 127.0.0.1:1234.
-        # sample_app still drains the pipe before it reaches depth 32.
-        box.exec("/opt/orbitlog/burst", str(self.params["noop_count"]))
-        try:
-            box.wait_for("Pipe Overflow", timeout_s=8)
-        except RuntimeError:
-            log = box.logs()
-            raise RuntimeError(
-                "no Pipe Overflow after "
-                f"{self.params['noop_count']} NOOPs; "
-                f"log has {log.count('NOOP command')} NOOP lines and "
-                f"{log.count('Pipe Overflow')} overflow lines"
-            )
+        box.wait_for_event("SLOW_APP", APP_INIT_EID)
+        box.exec("/opt/orbitlog/burst", str(self.params["burst_count"]), self.params["msg_id"][2:])
+        box.wait_for_event("CFE_SB", CFE_SB_Q_FULL_ERR_EID, timeout_s=10, subject="pipe SLOW_APP_CMD")
 
 
 @register("cfs_app_crash_restart")
@@ -133,7 +139,7 @@ class CfsAppCrashRestart(_CfsFault):
 
     CFE_ES_RestartAppCmd only works while the app is still registered, so the
     injector sends the restart first (option b) and the error exit second.
-    Both events are required. A missing line fails the trigger.
+    Both events are required. A missing event fails the trigger.
     """
 
     component = "cfs.es.fault_app"
@@ -143,10 +149,11 @@ class CfsAppCrashRestart(_CfsFault):
 
     def trigger(self) -> None:
         box = self._boot()
-        box.wait_for("FAULT_APP initialized")
+        box.wait_for_event("FAULT_APP", APP_INIT_EID)
         self._send(box, restart_app_cmd("FAULT_APP"))
-        # "Initiated" is logged before the restart finishes. The exit command
-        # is dropped if it arrives while FAULT_APP is not subscribed yet.
-        box.wait_for("Restart Application FAULT_APP Completed")
+        # ES event 10 ("Restart Application ... Completed") is logged once
+        # FAULT_APP is re-created. The exit command is dropped if it arrives
+        # while FAULT_APP is not subscribed yet.
+        box.wait_for_event("CFE_ES", CFE_ES_RESTART_APP_INF_EID, subject="FAULT_APP")
         self._send(box, fault_app_exit_cmd())
-        box.wait_for("Exit Application FAULT_APP")
+        box.wait_for_event("CFE_ES", CFE_ES_ERREXIT_APP_INF_EID, subject="FAULT_APP")

@@ -4,6 +4,8 @@ from __future__ import annotations
 import subprocess
 import time
 
+from orbitlog.capture import parse_evs
+
 IMAGE = "orbitlog-cfs"
 OPERATIONAL = "CFE_ES_Main entering OPERATIONAL"
 
@@ -60,6 +62,22 @@ class CfsContainer:
                 return last
             time.sleep(0.25)
         raise RuntimeError(f"timed out waiting for {text!r} in {self.name}")
+
+    def wait_for_event(self, app: str, event_id: int, timeout_s: float = 20, subject: str | None = None) -> dict:
+        """Wait for an EVS event from `app` with `event_id` and return it parsed.
+
+        `subject`, if given, must appear in the event text. cFS reuses event IDs
+        for every app it acts on (boot logs CFE_ES 14 for SBN, for example).
+        """
+        deadline = time.monotonic() + timeout_s
+        while time.monotonic() < deadline:
+            for event in parse_evs(self.logs()):
+                if (event["app"] == app and event["event_id"] == event_id
+                        and (subject is None or subject in event["text"])):
+                    return event
+            time.sleep(0.25)
+        about = f" about {subject!r}" if subject else ""
+        raise RuntimeError(f"timed out after {timeout_s}s waiting for {app} event {event_id}{about} in {self.name}")
 
     def exec(self, *args: str) -> subprocess.CompletedProcess[str]:
         return subprocess.run(
