@@ -141,3 +141,63 @@ def test_corrupt_input_end_to_end(seed, tmp_path):
     expected = {"truncate": ("truncated", "too short"), "bitflip": ("crc mismatch", "truncated"),
                 "bad_magic": ("bad magic",)}
     assert any(s in stderr for s in expected[label["injected_param"]["mode"]])
+
+
+def test_disk_full_without_dev_full_records_failed(tmp_path, monkeypatch):
+    from orbitlog.faults import classes
+    real = classes.os.path.exists
+    monkeypatch.setattr(classes.os.path, "exists", lambda p: False if p == "/dev/full" else real(p))
+    label = inject("disk_full", 0, tmp_path)
+    assert label["trigger_status"] == "failed"
+    assert "/dev/full not available" in label["trigger_error"]
+    assert load_label(tmp_path / "label.json")["trigger_status"] == "failed"
+
+
+class _HookProbe(FaultInjector):
+    component = "probe"
+    fail = False
+    order: list = []
+
+    def choose_params(self, rng):
+        return {}
+
+    def trigger(self):
+        if self.fail:
+            raise RuntimeError("no fault")
+
+    def collect(self, out_dir):
+        self.order.append("collect")
+        return []
+
+    def cleanup(self):
+        self.order.append("cleanup")
+
+
+@pytest.mark.parametrize("fail", [False, True])
+def test_before_cleanup_runs_before_cleanup(tmp_path, monkeypatch, fail):
+    probe = type("P", (_HookProbe,), {"fail": fail, "order": []})
+    monkeypatch.setitem(inj_mod._REGISTRY, "watchdog_reset", probe)
+    label = inject("watchdog_reset", 0, tmp_path, before_cleanup=lambda i, o: probe.order.append("hook"))
+    assert label["trigger_status"] == ("failed" if fail else "triggered")
+    assert probe.order == (["hook", "cleanup"] if fail else ["collect", "hook", "cleanup"])
+
+
+def test_before_cleanup_exception_warns_and_keeps_label(tmp_path, monkeypatch):
+    probe = type("P", (_HookProbe,), {"order": []})
+    monkeypatch.setitem(inj_mod._REGISTRY, "watchdog_reset", probe)
+
+    def boom(i, o):
+        raise ValueError("hook broke")
+
+    with pytest.warns(RuntimeWarning, match="hook broke"):
+        label = inject("watchdog_reset", 0, tmp_path, before_cleanup=boom)
+    assert label["trigger_status"] == "triggered"
+    assert load_label(tmp_path / "label.json")["trigger_status"] == "triggered"
+    assert probe.order == ["collect", "cleanup"]
+
+
+def test_inject_without_hook_unchanged(tmp_path, monkeypatch):
+    probe = type("P", (_HookProbe,), {"order": []})
+    monkeypatch.setitem(inj_mod._REGISTRY, "watchdog_reset", probe)
+    assert inject("watchdog_reset", 0, tmp_path)["trigger_status"] == "triggered"
+    assert probe.order == ["collect", "cleanup"]
