@@ -15,7 +15,7 @@ setup:
 	$(VPY) -m pip install -e .
 
 test:
-	@if [ -x "$(VPY)" ]; then $(VPY) -m pytest -q -m "not cfs"; else $(PYTHON) -m pytest -q -m "not cfs"; fi
+	@if [ -x "$(VPY)" ]; then $(VPY) -m pytest -q -m "not cfs and not docker and not linux_i2c"; else $(PYTHON) -m pytest -q -m "not cfs and not docker and not linux_i2c"; fi
 
 test-cfs:
 	@if [ -x "$(VPY)" ]; then $(VPY) -m pytest -q -m cfs; else $(PYTHON) -m pytest -q -m cfs; fi
