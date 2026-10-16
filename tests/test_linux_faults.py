@@ -6,7 +6,8 @@ import pytest
 
 from orbitlog.dataset import load_label, validate_label
 from orbitlog.faults import linux
-from orbitlog.faults.injector import inject
+from orbitlog.faults import injector as inj_mod
+from orbitlog.faults.injector import get_injector, inject, registered
 
 
 def test_oom_params_always_exceed_cap():
@@ -58,7 +59,8 @@ def test_i2c_params_deterministic_and_include_article_address():
 
 
 @pytest.mark.skipif(sys.platform.startswith("linux"), reason="checks the non-Linux path")
-def test_i2c_non_linux_records_failed(tmp_path):
+def test_i2c_non_linux_records_failed(tmp_path, monkeypatch):
+    monkeypatch.setitem(inj_mod._REGISTRY, "i2c_sensor_nack", linux.I2cSensorNack)
     label = inject("i2c_sensor_nack", 0, tmp_path)
     assert label["trigger_status"] == "failed"
     assert "needs a Linux host" in label["trigger_error"]
@@ -87,8 +89,27 @@ def test_oom_live(tmp_path, seed):
         assert "python_exit=137" in out and "oom_kill 1" in out
 
 
+def test_i2c_not_registered_by_default(monkeypatch):
+    monkeypatch.delenv(linux.I2C_ENABLE_ENV, raising=False)
+    assert not linux.i2c_enabled()
+    assert "i2c_sensor_nack" not in registered()
+    with pytest.raises(NotImplementedError):
+        get_injector("i2c_sensor_nack")
+
+
+def test_i2c_enable_needs_linux_and_env(monkeypatch):
+    monkeypatch.setenv(linux.I2C_ENABLE_ENV, "1")
+    monkeypatch.setattr(linux.sys, "platform", "win32")
+    assert not linux.i2c_enabled()
+    monkeypatch.setattr(linux.sys, "platform", "linux")
+    assert linux.i2c_enabled()
+
+
 @pytest.mark.linux_i2c
 def test_i2c_live(tmp_path):
+    # As root on Linux with i2c-stub:  ORBITLOG_ENABLE_I2C_STUB=1 pytest -m linux_i2c
+    if "i2c_sensor_nack" not in registered():
+        pytest.skip("set ORBITLOG_ENABLE_I2C_STUB=1 on a Linux host with i2c-stub")
     label = inject("i2c_sensor_nack", 0, tmp_path)
     assert label["trigger_status"] == "triggered", label
     assert "OSError" in (tmp_path / "artefacts" / "stderr.txt").read_text()

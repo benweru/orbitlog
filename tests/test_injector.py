@@ -14,7 +14,6 @@ IMPLEMENTED = [
     "cfs_app_crash_restart",
     "corrupt_input_file",
     "disk_full",
-    "i2c_sensor_nack",
     "oom_alloc_failure",
     "payload_python_exception",
     "sb_pipe_full",
@@ -30,7 +29,7 @@ def test_registry_has_the_implemented_classes():
 
 def test_other_classes_raise_not_implemented():
     others = [c["name"] for c in load_fault_classes() if c["name"] not in IMPLEMENTED]
-    assert len(others) == 7
+    assert len(others) == 8
     for name in others:
         with pytest.raises(NotImplementedError):
             get_injector(name)

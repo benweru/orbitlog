@@ -4,7 +4,9 @@ docs/tasks/week3-linux-faults.md.
 
 oom_alloc_failure runs in a cgroup v2-capped container, so it works anywhere
 Docker runs. i2c_sensor_nack needs a Linux host with root and the i2c-stub
-module; elsewhere its trigger raises and the label stays failed.
+module. It has not been triggered for real yet, so it is only registered when
+ORBITLOG_ENABLE_I2C_STUB=1 is set on Linux; otherwise get_injector() raises
+NotImplementedError and dataset runs skip it.
 """
 from __future__ import annotations
 
@@ -102,7 +104,15 @@ def find_stub_bus(sys_class: Path = Path("/sys/class/i2c-dev")) -> int | None:
     return None
 
 
-@register("i2c_sensor_nack")
+I2C_ENABLE_ENV = "ORBITLOG_ENABLE_I2C_STUB"
+
+
+def i2c_enabled() -> bool:
+    """i2c_sensor_nack has never been triggered for real, so it is registered
+    only when explicitly enabled on a Linux host that has i2c-stub."""
+    return sys.platform.startswith("linux") and os.environ.get(I2C_ENABLE_ENV) == "1"
+
+
 class I2cSensorNack(FaultInjector):
     """A camera capture reads a sensor address with no device behind it.
 
@@ -172,3 +182,9 @@ class I2cSensorNack(FaultInjector):
         if self.loaded_stub:
             subprocess.run(["modprobe", "-r", "i2c-stub"], capture_output=True, text=True)
             self.loaded_stub = False
+
+
+if i2c_enabled():
+    register("i2c_sensor_nack")(I2cSensorNack)
+else:
+    I2cSensorNack.fault_class = "i2c_sensor_nack"
