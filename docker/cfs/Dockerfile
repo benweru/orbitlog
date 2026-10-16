@@ -13,13 +13,16 @@ RUN git clone --branch v7.0.1 --depth 1 https://github.com/nasa/cFS.git . \
 
 # ci_lab otherwise ingests at most 11 packets per wakeup, and sample_app then
 # drains them, so the depth-32 command pipe never overflows.
+# grep -q fails the build if the sed pattern stops matching.
 RUN sed -i 's/DEFAULT_CI_LAB_PLATFORM_MAX_INGEST_PKTS 10/DEFAULT_CI_LAB_PLATFORM_MAX_INGEST_PKTS 64/' \
       apps/ci_lab/fsw/inc/ci_lab_internal_cfg.h \
+    && grep -q 'DEFAULT_CI_LAB_PLATFORM_MAX_INGEST_PKTS 64' apps/ci_lab/fsw/inc/ci_lab_internal_cfg.h \
     && make native_std.prep && make native_std.install
 
-# fault_app is the error-exit target. Bad sample_app tables fail validation
+# fault_app is the error-exit target. slow_app is the sb_pipe_full target: a
+# depth-4 pipe drained every 5 s. Bad sample_app tables fail validation
 # because Int1 is greater than 10.
-COPY fault_app.c bad_table.c burst.c /opt/orbitlog/
+COPY fault_app.c slow_app.c bad_table.c burst.c /opt/orbitlog/
 RUN set -eux; \
     INC="-I/cfs/sample_defs/inc -I/cfs/build-native_std/inc -I/cfs/build-native_std/native/default_cpu1/inc \
       -I/cfs/cfe/modules/core_api/fsw/inc -I/cfs/cfe/modules/msg/fsw/inc -I/cfs/cfe/modules/tbl/fsw/inc \
@@ -30,7 +33,9 @@ RUN set -eux; \
     gcc -O2 -o /opt/orbitlog/burst /opt/orbitlog/burst.c; \
     gcc -dM -E $INC /opt/orbitlog/fault_app.c | grep -E 'FAULT_APP_CMD_MID|FAULT_APP_EXIT_CC'; \
     gcc -fPIC -shared $INC -o /cfs/build-native_std/exe/cpu1/cf/fault_app.so /opt/orbitlog/fault_app.c; \
+    gcc -fPIC -shared $INC -o /cfs/build-native_std/exe/cpu1/cf/slow_app.so /opt/orbitlog/slow_app.c; \
     printf '%s\n' 'CFE_APP, fault_app, FAULT_APP_Main, FAULT_APP, 60, 16384, 0x0, 0;' \
+      'CFE_APP, slow_app, SLOW_APP_Main, SLOW_APP, 60, 16384, 0x0, 0;' \
       >> /cfs/build-native_std/exe/cpu1/cf/cfe_es_startup.scr; \
     for n in 11 42 100 1000; do \
       sed "s/{11, 2}/{${n}, 2}/; s/b11.tbl/b${n}.tbl/" \

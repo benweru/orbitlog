@@ -43,6 +43,9 @@ FAULT_APP_EXIT_CC = 1
 
 TABLE_NAME = "SAMPLE_APP.ExampleTable"
 SAMPLE_PIPE_DEPTH = 32
+# docker/cfs/slow_app.c. Topic 0xB9 is unused in the v7.0.1 bundle.
+SLOW_APP_CMD_MID = 0x18B9
+SLOW_APP_PIPE_DEPTH = 4
 
 
 def checksum(packet: bytes) -> int:
