@@ -68,9 +68,15 @@ class DiskFull(_PayloadInjector):
 
     def setup(self) -> None:
         super().setup()
+        self.output = Path("/dev/full")
+
+    def trigger(self) -> None:
+        # Checked here, after the label is written, so platforms without
+        # /dev/full (Windows, macOS) record trigger_status: failed instead of
+        # crashing the dataset build.
         if not os.path.exists("/dev/full"):
             raise RuntimeError("/dev/full not available on this platform")
-        self.output = Path("/dev/full")
+        super().trigger()
 
 
 @register("payload_python_exception")
