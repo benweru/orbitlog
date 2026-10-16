@@ -6,6 +6,11 @@ Rules for every coding agent in this repo: Ben's Cursor CLI agent and Grok Bot.
 - Read `docs/plan.md` before starting any work.
 - Task briefs live in `docs/tasks/`. Work only on the task you were given and stay inside its scope.
 
+## Sprints
+- Work is organized in sprints, not weeks. Each sprint has a title that Ben approves in chat. The schedule is in `docs/plan.md` section 8.
+- When a sprint starts, propose a title in chat. Until Ben approves it, mark it *(title pending Ben's approval)* wherever it appears.
+- Task briefs are named `docs/tasks/sprint<N>-<topic>.md`.
+
 ## Workflow
 - One branch and one PR per task. **Never push directly to `main`.**
 - Run `make test` before every push. It must pass.

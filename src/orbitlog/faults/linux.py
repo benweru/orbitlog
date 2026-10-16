@@ -1,6 +1,6 @@
 """Linux-side faults from Satlyt's Gemma case study
 (https://deepmind.google/models/gemma/gemmaverse/satlyt/). Brief:
-docs/tasks/week3-linux-faults.md.
+docs/tasks/sprint3-linux-fault-injection.md.
 
 oom_alloc_failure runs in a cgroup v2-capped container, so it works anywhere
 Docker runs. i2c_sensor_nack needs a Linux host with root and the i2c-stub

@@ -1,5 +1,6 @@
-# Week 2: cFS log capture and dataset builder
+# Sprint 2: cFS log capture and dataset builder
 
+- **Sprint:** 2: cFS fault injection and log capture *(title pending Ben's approval)*
 - **Owner:** Grok Bot (works on the box)
 - **Branch:** `feat/cfs-log-capture`
 - **PR title:** `feat(dataset): capture cFS logs and build seeded case manifest`
@@ -40,5 +41,5 @@ Every fault case ends up as a self-contained folder: the label, the payload arte
 
 ## Out of scope
 - The cFS fault classes themselves (Ben's `feat/cfs-fault-injectors`).
-- The train/dev/test split, distractor noise and the held-out "no fault" cases. Those are week 3–4.
+- The train/dev/test split, distractor noise and the held-out "no fault" cases. Those are Sprints 3–4.
 - Model inference.
