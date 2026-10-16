@@ -6,7 +6,7 @@ else
   VPY := $(VENV)/bin/python
 endif
 
-.PHONY: setup test quick reproduce clean dataset cfs-build cfs-up cfs-logs cfs-down
+.PHONY: setup test quick reproduce clean cfs-build cfs-up cfs-logs cfs-down
 
 setup:
 	$(PYTHON) -m venv $(VENV)
@@ -16,11 +16,6 @@ setup:
 
 test:
 	@if [ -x "$(VPY)" ]; then $(VPY) -m pytest -q; else $(PYTHON) -m pytest -q; fi
-
-N ?= 30
-SEED ?= 0
-dataset:
-	@if [ -x "$(VPY)" ]; then $(VPY) -m orbitlog.build_dataset --n $(N) --seed $(SEED); else $(PYTHON) -m orbitlog.build_dataset --n $(N) --seed $(SEED); fi
 
 quick:
 	@echo "make quick: not yet implemented (target: 3 configs x 10 cases, <30 min on a laptop)."
@@ -46,3 +41,12 @@ cfs-logs:
 
 cfs-down:
 	docker rm -f orbitlog-cfs
+
+N ?= 30
+SEED ?= 0
+# Pure make (no shell syntax) so it also works with make on Windows/PowerShell.
+# Windows equivalent without make:  .venv\Scripts\python -m orbitlog.build_dataset --n 6 --seed 0
+DATASET_PY := $(if $(wildcard $(VPY) $(VPY).exe),$(VPY),$(PYTHON))
+.PHONY: dataset
+dataset:
+	$(DATASET_PY) -m orbitlog.build_dataset --n $(N) --seed $(SEED)
