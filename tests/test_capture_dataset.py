@@ -11,6 +11,7 @@ from orbitlog import capture
 from orbitlog.capture import parse_evs, parse_evs_line
 from orbitlog.faults import injector as inj_mod
 
+HOST = ["corrupt_input_file", "disk_full", "payload_python_exception"]
 HAS_DEV_FULL = os.path.exists("/dev/full")
 BOOT = (Path(__file__).parent / "fixtures" / "cfs_boot_pr3.log").read_text()
 
@@ -138,8 +139,10 @@ def no_docker(monkeypatch):
 
 
 def test_build_end_to_end_and_reproducible(tmp_path, no_docker):
-    rows1 = bd.build(6, 0, tmp_path / "d1")
-    rows2 = bd.build(6, 0, tmp_path / "d2")
+    # Host classes only: once cFS injectors are registered, the default list
+    # would start real containers, which belongs in `pytest -m cfs`.
+    rows1 = bd.build(6, 0, tmp_path / "d1", classes=HOST)
+    rows2 = bd.build(6, 0, tmp_path / "d2", classes=HOST)
     assert _strip(rows1) == _strip(rows2)
     for a, b in zip(rows1, rows2):
         la = json.loads((tmp_path / "d1" / "cases" / a["case_id"] / "label.json").read_text())
