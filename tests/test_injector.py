@@ -10,17 +10,25 @@ from orbitlog.faults import load_fault_classes
 from orbitlog.faults import injector as inj_mod
 from orbitlog.faults.injector import FaultInjector, get_injector, inject, register, registered
 
-IMPLEMENTED = ["corrupt_input_file", "disk_full", "payload_python_exception"]
+IMPLEMENTED = [
+    "cfs_app_crash_restart",
+    "corrupt_input_file",
+    "disk_full",
+    "payload_python_exception",
+    "sb_pipe_full",
+    "table_load_validation",
+]
+PAYLOAD = ["corrupt_input_file", "disk_full", "payload_python_exception"]
 linux_only = pytest.mark.skipif(not sys.platform.startswith("linux"), reason="/dev/full is Linux-only")
 
 
-def test_registry_has_exactly_the_three_classes():
+def test_registry_has_the_implemented_classes():
     assert registered() == IMPLEMENTED
 
 
 def test_other_classes_raise_not_implemented():
     others = [c["name"] for c in load_fault_classes() if c["name"] not in IMPLEMENTED]
-    assert len(others) == 12
+    assert len(others) == 9
     for name in others:
         with pytest.raises(NotImplementedError):
             get_injector(name)
@@ -104,9 +112,14 @@ def test_seed_determinism(name, tmp_path):
     if name == "disk_full" and not sys.platform.startswith("linux"):
         pytest.skip("Linux only")
     assert a.prepare(42) == b.prepare(42)
-    assert (tmp_path / "a" / "frame.olim").read_bytes() == (tmp_path / "b" / "frame.olim").read_bytes()
+    if name in PAYLOAD:
+        assert (tmp_path / "a" / "frame.olim").read_bytes() == (tmp_path / "b" / "frame.olim").read_bytes()
     params = [cls(tmp_path / f"s{s}").choose_params(random.Random(s)) for s in range(20)]
-    assert len({json.dumps(p, sort_keys=True) for p in params}) > 1
+    unique = {json.dumps(p, sort_keys=True) for p in params}
+    if name == "cfs_app_crash_restart":
+        assert len(unique) == 1
+    else:
+        assert len(unique) > 1
 
 
 def _run(name, seed, tmp_path):

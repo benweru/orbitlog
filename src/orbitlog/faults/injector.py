@@ -94,6 +94,9 @@ def _write_label(path: Path, label: dict) -> None:
         f.flush()
         os.fsync(f.fileno())
     os.replace(tmp, path)
+    # Windows rejects os.open on a directory. The file itself is already fsynced.
+    if os.name == "nt":
+        return
     dfd = os.open(path.parent, os.O_RDONLY)
     try:
         os.fsync(dfd)
@@ -137,3 +140,4 @@ def inject(fault_class: str, seed: int, out_dir: str | Path) -> dict:
 
 # Register the implemented classes.
 from orbitlog.faults import classes as _classes  # noqa: E402,F401
+from orbitlog.faults import cfs as _cfs  # noqa: E402,F401
