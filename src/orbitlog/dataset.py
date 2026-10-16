@@ -40,10 +40,10 @@ def load_label(path: str | Path) -> dict:
 
 
 def split_by_seed(seeds: list[int], test_fraction: float = 0.5) -> dict:
-    """TODO(week 3): deterministic seed-based train/dev/test split."""
+    """TODO(sprint 4): deterministic seed-based train/dev/test split."""
     raise NotImplementedError
 
 
 def load_cases(path: str) -> list[dict]:
-    """TODO(week 3): load a case directory (label + artefacts)."""
+    """TODO(sprint 4): load a case directory (label + artefacts)."""
     raise NotImplementedError

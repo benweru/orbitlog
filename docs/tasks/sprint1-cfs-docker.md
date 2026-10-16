@@ -1,5 +1,6 @@
-# Week 1: NASA cFS in Docker
+# Sprint 1: NASA cFS in Docker
 
+- **Sprint:** 1: Memory harness and cFS bring-up *(title pending Ben's approval)*
 - **Owner:** Ben's agent
 - **Branch:** `feat/cfs-docker-image`
 - **PR title:** `feat(cfs): build and run cFS v7.0.1 in Docker`
@@ -38,6 +39,6 @@ Build and boot the NASA cFS bundle (https://github.com/nasa/cFS) inside `docker/
 - [ ] The PR description pastes the real boot log excerpt. Do not paraphrase it or make it up.
 
 ## Out of scope
-- Fault injection, labels and the dataset. Those are the bot's task in `week1-fault-injector.md` on `feat/fault-injector-core`.
+- Fault injection, labels and the dataset. Those are the bot's task in `sprint1-fault-injector.md` on `feat/fault-injector-core`.
 - Ground-system tools (cFS-GroundSystem), telemetry decoding, EDS builds and RTEMS or cross-compile targets.
 - CI for the Docker image. Running it in CI can be added later.

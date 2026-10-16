@@ -1,5 +1,6 @@
 # Sprint 3: Linux-side fault injection
 
+- **Sprint:** 3: Linux-side fault injection (approved by Ben)
 - **Owner:** Ben's agent
 - **Branch:** `feat/fault-oom-alloc-and-i2c-nack`
 - **PR title:** `feat(faults): add oom_alloc_failure and i2c_sensor_nack injectors`

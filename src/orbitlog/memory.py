@@ -18,5 +18,5 @@ def fingerprint() -> dict:
 
 
 def run_capped(cmd: list[str], max_mib: int) -> dict:
-    """TODO(week 1): run cmd in a cgroup v2 scope, return memory.peak, RSS, tok/s."""
+    """TODO(sprint 1): run cmd in a cgroup v2 scope, return memory.peak, RSS, tok/s."""
     raise NotImplementedError("cgroup memory harness not yet implemented")

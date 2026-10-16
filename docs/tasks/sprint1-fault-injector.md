@@ -1,5 +1,6 @@
-# Week 1: Fault injector core
+# Sprint 1: Fault injector core
 
+- **Sprint:** 1: Memory harness and cFS bring-up *(title pending Ben's approval)*
 - **Owner:** Grok Bot (works on the box)
 - **Branch:** `feat/fault-injector-core`
 - **PR title:** `feat(faults): add injector interface and first 3 fault classes`

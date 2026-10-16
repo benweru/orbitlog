@@ -1,5 +1,6 @@
-# Week 2: cFS fault injectors
+# Sprint 2: cFS fault injectors
 
+- **Sprint:** 2: cFS fault injection and log capture *(title pending Ben's approval)*
 - **Owner:** Ben's agent
 - **Branch:** `feat/cfs-fault-injectors`
 - **PR title:** `feat(faults): add three cFS fault injectors`
@@ -14,7 +15,7 @@ Implement three fault classes from `configs/fault_classes.yaml` that run against
 | `sb_pipe_full` | Send a burst of `SAMPLE_APP` NOOP commands faster than the app drains its pipe | The command pipe depth is 32 (`DEFAULT_SAMPLE_APP_PLATFORM_PIPE_DEPTH`, `sample_app_internal_cfg.h`). SB raises `CFE_SB_Q_FULL_ERR_EID` (25), "Pipe Overflow,MsgId 0x%x,pipe %s,sender %s" (`cfe_sb_priv.c`), and `MsgLimitErrorCounter` goes up |
 | `cfs_app_crash_restart` | Make an app exit with an error, then let it be restarted (see the options below) | ES raises `CFE_ES_ERREXIT_APP_INF_EID` (14) or `CFE_ES_ERREXIT_APP_ERR_EID` (33) for an error exit, and `CFE_ES_RESTART_APP_INF_EID` (10) for the restart. HS is in `MISSION_GLOBAL_APPLIST`, but its default app-monitor table (`apps/hs/fsw/tables/hs_amt.c`) only watches cFE core apps with `HS_AMTActType_NOACT` |
 
-Why these three: they are the faults that only exist inside flight software, so they are the cFS part of the benchmark. Satlyt's flown scenarios (out-of-memory, sensor failure) correspond to `oom_alloc_failure` and `i2c_sensor_nack`. Those run on the Linux host side and are scheduled for week 3 (the bot), so they aren't in this brief.
+Why these three: they are the faults that only exist inside flight software, so they are the cFS part of the benchmark. Satlyt's flown scenarios (out-of-memory, sensor failure) correspond to `oom_alloc_failure` and `i2c_sensor_nack`. Those run on the Linux host side and are scheduled for Sprint 3, so they aren't in this brief.
 
 ## Context
 - docs/plan.md §4 (dataset) and §3 (the model must output `root_cause_class` and `component`).
@@ -52,6 +53,6 @@ Why these three: they are the faults that only exist inside flight software, so 
 - [ ] Any MsgId or function-code value used was read from the build, and the PR says where it came from.
 
 ## Out of scope
-- Saving the captured logs into case folders, the dataset builder and `make dataset`. That's the bot's task, `docs/tasks/week2-cfs-log-capture.md` on `feat/cfs-log-capture`. Until that lands, write raw `docker logs` output to `artefacts/container.log` and nothing more.
-- Host-side classes such as OOM, sensor NACK, thermal and clock. Those are week 3.
+- Saving the captured logs into case folders, the dataset builder and `make dataset`. That's the bot's task, `docs/tasks/sprint2-cfs-log-capture.md` on `feat/cfs-log-capture`. Until that lands, write raw `docker logs` output to `artefacts/container.log` and nothing more.
+- Host-side classes such as OOM, sensor NACK, thermal and clock. Those are Sprint 3.
 - Ground-system or telemetry decoding.

@@ -28,14 +28,14 @@ The name says what the branch is for. Never use generic names like `phase-1`, `w
 - `feat/fault-injector-core`
 - `fix/cgroup-peak-memory-reading`
 - `exp/e2b-iq2-quant-grid`
-- `docs/repo-conventions-and-week1-brief`
+- `docs/plan-weeks-to-sprints`
 
 ### Commits: Conventional Commits
 `type(optional-scope): short present-tense summary`, 72 characters or less. Add a body only when the reason isn't obvious.
 - `feat(cfs): add Dockerfile pinned to cFS v7.0.1`
 - `fix(memory): read memory.peak from the scope cgroup`
 - `exp(e1): run Q4_0 vs IQ2_M at 512 MiB on 60 test cases`
-- `docs: add week 1 task briefs`
+- `docs(tasks): add sprint 3 linux-fault-injection brief`
 
 Types: `feat`, `fix`, `chore`, `docs`, `test`, `refactor`, `perf`, `exp` (benchmark and experiment runs).
 Branches use a slash (`feat/...`) and commits use a colon (`feat: ...`). PR titles follow the commit style.

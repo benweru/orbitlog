@@ -1,5 +1,5 @@
 # OrbitLog v2: Gemma 4 E2B fault diagnosis under a 512 MiB RAM cap
-_Plan written 15 Oct 2026, 11:30 AM EAT. Every number below carries its source. Items marked **[est]** are my own arithmetic, and **[verify]** marks items to confirm in week 1._
+_Plan written 15 Oct 2026, 11:30 AM EAT. Every number below carries its source. Items marked **[est]** are my own arithmetic, and **[verify]** marks items to confirm in Sprint 1._
 
 ## 1. The open problem (Satlyt's own words, via third parties)
 - Satlyt flew a quantized **Gemma 3 1B** (through llama.cpp) on a Momentus spacecraft. Reported results: diagnostic payloads cut by 64.4% and 64.8% (1,319→469 B and 1,318→464 B) at 22.71 and 25.48 tok/s. The team is working on pruning and distillation, targeting a memory-footprint reduction of more than 90%. https://deepmind.google/models/gemma/gemmaverse/satlyt/
@@ -28,7 +28,7 @@ _Plan written 15 Oct 2026, 11:30 AM EAT. Every number below carries its source. 
 - **Memory measurement:** run each model inside a cgroup v2 (`systemd-run --scope -p MemoryMax=512M -p MemorySwapMax=0 llama-cli …`) and report `memory.peak` **[verify the kernel version on the Pi]**. This counts page cache too. A memory-mapped (mmap'd) PLE table therefore counts only for the pages actually touched, and the kernel has to evict pages to stay under the cap. That is honest: nothing is hidden on disk without the cost being counted. We also report RSS, flash bytes read per token, and tok/s, so the cost of swapping weights in from flash is visible.
 - **Accuracy measurement:** the model must output JSON `{root_cause_class, component, evidence_line, action}`. **Correct** means an exact match on `root_cause_class` (one of 15 classes) **and** the right component. A second metric is an action-appropriateness score from an LLM judge, with 20% of the cases checked by hand. We report 95% Wilson confidence intervals; with n=60 they are about ±10 points, so we say that openly.
 
-**Why 80%:** it is a placeholder. Week 2 measures Baseline B, and the target is then fixed at (Baseline B − 10 points) **before** any compression runs. It is published in the repo's PREREGISTRATION.md with a git timestamp.
+**Why 80%:** it is a placeholder. Sprint 2 measures Baseline B, and the target is then fixed at (Baseline B − 10 points) **before** any compression runs. It is published in the repo's PREREGISTRATION.md with a git timestamp.
 
 ## 4. Fault dataset (≥50 train/dev + 60 held-out test)
 - **Generator:** run **NASA cFS** (open source, https://github.com/nasa/cFS) in Docker on Linux, plus a Python payload app such as an OpenCV image pipeline, mirroring Satlyt's published scenarios. Inject real faults and capture the real artefacts: cFS event messages (EVS), housekeeping telemetry, syslog/dmesg, stack traces.
@@ -66,20 +66,24 @@ Plot the Pareto frontier. **Back-of-envelope:** the ≈1.19 GB of transformer we
 ## 7. Public write-up
 TL;DR with the curve; the exact baseline definition and why; the dataset design and its limits; the preregistered target and whether it was met; the full Pareto table; failures (ternary, aggressive pruning); the E2 comparison including the zstd baseline; reproduction instructions; what would differ on real flight hardware (radiation, Jetson-class SoC, cFS integration); and links to the dataset on Hugging Face and the code under Apache-2.0. Post it on GitHub plus a blog post, and send the link to Satlyt (outreach drafts still need Ben's approval).
 
-## 8. Week-by-week plan (10–15 h/week, ~12 weeks)
-| Week | Work | Deliverable |
+## 8. Sprint plan
+Work is organized in titled sprints. Ben approves each title in chat, and the agent proposes one when a sprint starts. Titles marked *(title pending Ben's approval)* are placeholders. The original effort estimate is unchanged: about 10–15 h a week, roughly 12 weeks in total plus 2 weeks of buffer.
+
+| Sprint | Work | Deliverable |
 |---|---|---|
-| 1 | Set up llama.cpp, run E2B Q4_0, build the cgroup memory harness, check the [verify] items | `bench/` harness that measures memory.peak |
-| 2 | cFS in Docker, injector for 5 classes, JSON schema | first 40 cases; Baseline B measured; preregistration committed |
-| 3–4 | All 15 classes, noise, split; second-reviewer check | dataset v1 (≥110 cases) |
-| 5 | Quantization grid (Q4→IQ2, imatrix, KV, PLE mmap) | first curve |
-| 6 | Layer-pruning sweep | curve v2 |
-| 7–8 | Distillation into 270M + LoRA on E2B (Colab/Kaggle) | fine-tuned GGUFs |
-| 9 | E2 (binary frame, GBNF) | compression table |
-| 10 | Runs on the Pi, energy measurements | hardware numbers |
-| 11 | `make reproduce`, CI, run on a clean machine | reproducible release |
-| 12 | Write-up and a 3-minute video | public post |
-Buffer: +2 weeks.
+| 1: Memory harness and cFS bring-up *(title pending Ben's approval)* | Set up llama.cpp, run E2B Q4_0, build the cgroup memory harness, check the [verify] items | `bench/` harness that measures memory.peak |
+| 2: cFS fault injection and log capture *(title pending Ben's approval)* | cFS in Docker, injector for 5 classes, JSON schema | first 40 cases; Baseline B measured; preregistration committed |
+| 3: Linux-side fault injection | Linux-side and remaining fault classes, toward all 15 | registered classes with real triggers |
+| 4: Dataset v1, noise and split *(title pending Ben's approval)* | Distractor noise, seed split, no-fault cases; second-reviewer check | dataset v1 (≥110 cases) |
+| 5: Quantization grid *(title pending Ben's approval)* | Quantization grid (Q4→IQ2, imatrix, KV, PLE mmap) | first curve |
+| 6: Layer-pruning sweep *(title pending Ben's approval)* | Layer-pruning sweep | curve v2 |
+| 7: Distillation and LoRA fine-tuning *(title pending Ben's approval)* | Distillation into 270M + LoRA on E2B (Colab/Kaggle) | fine-tuned GGUFs |
+| 8: Structured downlink compression *(title pending Ben's approval)* | E2 (binary frame, GBNF) | compression table |
+| 9: On-device runs and energy *(title pending Ben's approval)* | Runs on the Pi, energy measurements | hardware numbers |
+| 10: Reproducible release *(title pending Ben's approval)* | `make reproduce`, CI, run on a clean machine | reproducible release |
+| 11: Write-up and video *(title pending Ben's approval)* | Write-up and a 3-minute video | public post |
+
+The old weeks 3–4 ("All 15 classes, noise, split; second-reviewer check") are split into Sprints 3 and 4. Later phases are renumbered one per sprint.
 
 ## 9. Hardware and costs (approximate; check local prices)
 - Laptop he already owns (development and the main grid): KES 0.
