@@ -19,7 +19,7 @@ from pathlib import Path
 
 import jsonschema
 
-from orbitlog.capture import ContainerLogCapture
+from orbitlog import capture as cap_mod
 from orbitlog.dataset import load_label
 from orbitlog.faults.injector import inject, registered
 
@@ -41,6 +41,7 @@ MANIFEST_SCHEMA = {
         "capture": {"enum": ["captured", "unavailable", "error"]},
         "orbitlog_commit": {"type": "string"},
         "orbitlog_dirty": {"type": "boolean"},
+        "capture_source": {"enum": ["case_container", "shared_container", None]},
     },
 }
 
@@ -79,8 +80,15 @@ def build_case(entry: dict, cases_dir: Path, commit: str, dirty: bool, container
     case_dir = cases_dir / entry["case_id"]
     if case_dir.exists():
         shutil.rmtree(case_dir)
-    with ContainerLogCapture(case_dir / "artefacts", name=container) as cap:
-        inject(entry["fault_class"], entry["seed"], case_dir)
+    start = cap_mod.now_utc()
+    meta: dict = {}
+
+    def hook(injector, out):
+        meta.update(cap_mod.capture(injector, out / "artefacts", start, shared_name=container))
+
+    inject(entry["fault_class"], entry["seed"], case_dir, before_cleanup=hook)
+    if not meta:  # hook raised; record honestly
+        meta = {"capture": "error", "capture_error": "capture hook raised"}
     shutil.rmtree(case_dir / "work", ignore_errors=True)  # inputs are regenerable from the seed
     label = load_label(case_dir / "label.json")
     files = sorted(p for p in case_dir.rglob("*") if p.is_file())
@@ -94,7 +102,7 @@ def build_case(entry: dict, cases_dir: Path, commit: str, dirty: bool, container
                        "bytes": p.stat().st_size} for p in files],
         "orbitlog_commit": commit,
         "orbitlog_dirty": dirty,
-        **cap.meta(),
+        **meta,
     }
     jsonschema.validate(row, MANIFEST_SCHEMA)
     return row
