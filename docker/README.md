@@ -28,6 +28,10 @@ The exact wording comes from the boot log in the pull request for this image.
 - `--ulimit msgqueue=819200`, so the process is allowed enough POSIX message-queue bytes.
 - `--sysctl fs.mqueue.msg_max=256` and `--sysctl fs.mqueue.msgsize_max=16384`. Docker's default `msg_max` is 10. cFS pipe depths are larger than that, and `OS_QueueCreate` then fails with `errno = 22 (Invalid argument)` and `CFE_ES` never reaches OPERATIONAL.
 
+`apps/ci_lab/fsw/inc/ci_lab_internal_cfg.h` is patched before the build so `DEFAULT_CI_LAB_PLATFORM_MAX_INGEST_PKTS` is 64 instead of 10. A `grep -q` right after the `sed` fails the build if the pattern no longer matches.
+
+The image also contains `fault_app.so` and `slow_app.so` (both started from `cfe_es_startup.scr`), the `/opt/orbitlog/burst N [MSGID_HEX [FCN_CODE]]` sender, and bad sample-app tables `/cf/b11.tbl`, `/cf/b42.tbl`, `/cf/b100.tbl` and `/cf/b1000.tbl`. Those are for the fault injectors. `slow_app` owns a depth-4 command pipe (MsgId `0x18B9`) and drains it once every 5 s, so `sb_pipe_full` overflows it with a burst of 9 to 40 commands. `Int1` in each table is the number in the file name, which is above the sample app maximum of 10.
+
 The image runs as root. Even then, the default container lacks `CAP_SYS_NICE`, so startup logs this warning and continues:
 
 ```

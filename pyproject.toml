@@ -23,3 +23,4 @@ where = ["src"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+markers = ["cfs: needs the orbitlog-cfs image and a running Docker daemon"]

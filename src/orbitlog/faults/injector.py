@@ -4,6 +4,11 @@ inject() writes and fsyncs the ground-truth label BEFORE the fault is
 triggered, so labels are correct by construction. If triggering fails the
 label is kept and marked trigger_status: failed; labels are never rewritten
 after the fact except to record that status.
+
+Durability: label.json is fsynced, then os.replace()d into place, then its
+directory is fsynced so the rename survives a crash. On Windows the directory
+fsync is skipped, because os.open() cannot open a directory there; the file
+fsync still runs, but the rename is not guaranteed durable on Windows.
 """
 from __future__ import annotations
 
@@ -95,6 +100,9 @@ def _write_label(path: Path, label: dict) -> None:
         f.flush()
         os.fsync(f.fileno())
     os.replace(tmp, path)
+    # Windows rejects os.open on a directory. The file itself is already fsynced.
+    if os.name == "nt":
+        return
     dfd = os.open(path.parent, os.O_RDONLY)
     try:
         os.fsync(dfd)
@@ -151,3 +159,4 @@ def inject(fault_class: str, seed: int, out_dir: str | Path, before_cleanup=None
 
 # Register the implemented classes.
 from orbitlog.faults import classes as _classes  # noqa: E402,F401
+from orbitlog.faults import cfs as _cfs  # noqa: E402,F401

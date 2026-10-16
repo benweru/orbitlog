@@ -6,7 +6,7 @@ else
   VPY := $(VENV)/bin/python
 endif
 
-.PHONY: setup test quick reproduce clean cfs-build cfs-up cfs-logs cfs-down
+.PHONY: setup test test-cfs quick reproduce clean cfs-build cfs-up cfs-logs cfs-down
 
 setup:
 	$(PYTHON) -m venv $(VENV)
@@ -15,7 +15,10 @@ setup:
 	$(VPY) -m pip install -e .
 
 test:
-	@if [ -x "$(VPY)" ]; then $(VPY) -m pytest -q; else $(PYTHON) -m pytest -q; fi
+	@if [ -x "$(VPY)" ]; then $(VPY) -m pytest -q -m "not cfs"; else $(PYTHON) -m pytest -q -m "not cfs"; fi
+
+test-cfs:
+	@if [ -x "$(VPY)" ]; then $(VPY) -m pytest -q -m cfs; else $(PYTHON) -m pytest -q -m cfs; fi
 
 quick:
 	@echo "make quick: not yet implemented (target: 3 configs x 10 cases, <30 min on a laptop)."

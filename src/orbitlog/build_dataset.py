@@ -21,6 +21,7 @@ import jsonschema
 
 from orbitlog import capture as cap_mod
 from orbitlog.dataset import load_label
+from orbitlog.faults.cfs import keep_container_log
 from orbitlog.faults.injector import inject, registered
 
 MANIFEST_SCHEMA = {
@@ -84,7 +85,10 @@ def build_case(entry: dict, cases_dir: Path, commit: str, dirty: bool, container
     meta: dict = {}
 
     def hook(injector, out):
-        meta.update(cap_mod.capture(injector, out / "artefacts", start, shared_name=container))
+        try:
+            keep_container_log(injector, out)
+        finally:
+            meta.update(cap_mod.capture(injector, out / "artefacts", start, shared_name=container))
 
     inject(entry["fault_class"], entry["seed"], case_dir, before_cleanup=hook)
     if not meta:  # hook raised; record honestly
