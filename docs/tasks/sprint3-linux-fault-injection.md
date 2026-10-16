@@ -1,4 +1,4 @@
-# Week 3: Linux-side faults `oom_alloc_failure` and `i2c_sensor_nack`
+# Sprint 3: Linux-side fault injection
 
 - **Owner:** Ben's agent
 - **Branch:** `feat/fault-oom-alloc-and-i2c-nack`
@@ -8,8 +8,8 @@
 Two more registered fault classes (ids 1 and 2 in `configs/fault_classes.yaml`) that reproduce the two scenarios Satlyt published, with real artefacts and ground-truth labels written before trigger.
 
 ## Context
-- docs/plan.md §8 schedules weeks 3–4 as "All 15 classes, noise, split". §4 lists "OOM/allocation failure" and "I2C/sensor NACK (simulated by unbinding the driver or using a fake i2c-stub device)". **Gap:** the plan names neither class for week 3 specifically and doesn't define their parameters or artefacts. This brief takes both from the article below.
-- Satlyt case study (checked 16 Oct 2026, https://deepmind.google/models/gemma/gemmaverse/satlyt/):
+- docs/plan.md §8 schedules this phase as "All 15 classes, noise, split". §4 lists "OOM/allocation failure" and "I2C/sensor NACK (simulated by unbinding the driver or using a fake i2c-stub device)". **Gap:** the plan names neither class for this sprint specifically and doesn't define their parameters or artefacts. This brief takes both from the article below.
+- Satlyt case study (checked 16 Oct 2026, https://deepmind.google/models/gemma/gemmaverse/satlyt/). The same details appear in Ben's background notes (`orbitlog-context.md` §1, kept out of the repo):
   - **OOM:** "telemetry snapshot showing 99.6% RAM utilization and a system log indicating an OutOfMemoryError: Failed to allocate 144000000 bytes from the OpenCV preprocessing script when attempting to load a 12000x12000 image".
   - **Sensor:** "a kernel warning: tegra-i2c 3180000.i2c: no acknowledge from address 0x36 and an OSError: [Errno 121] Remote I/O error triggered during a scheduled camera payload capture". Target hardware is a Jetson Orin Nano.
 - **What this machine supports** (probed 16 Oct 2026, Windows 11 + Docker Desktop, VM kernel `6.6.87.2-microsoft-standard-WSL2`):
@@ -28,6 +28,7 @@ Two more registered fault classes (ids 1 and 2 in `configs/fault_classes.yaml`) 
    - Artefacts: its real traceback and the `dmesg` lines from the window.
    - The trigger fails unless the read raises `OSError`. Record the errno that actually occurs; don't assume 121.
    - Without the module or root, the trigger raises and the label stays `failed`.
+   - Until it has a reliable real trigger it is **not registered by default**, following the policy applied to `sb_pipe_full`. It is enabled only by `ORBITLOG_ENABLE_I2C_STUB=1` on a Linux host.
 3. Register both, update the class-count tests, and add unit tests with the add-fault-class checks: label before trigger, schema, seed determinism, and end to end in `tmp_path`.
 4. Live tests carry a `docker` marker (OOM) or a `linux_i2c` marker (I2C) and are deselected by default.
 
@@ -37,5 +38,5 @@ Two more registered fault classes (ids 1 and 2 in `configs/fault_classes.yaml`) 
 - [ ] `make test` passes. Nothing synthetic is written as log text.
 
 ## Out of scope
-- The remaining 9 classes, distractor noise, the train/dev/test split and no-fault cases (weeks 3–4, later tasks).
+- The remaining 9 classes, distractor noise, the train/dev/test split and no-fault cases (later Sprint 3 tasks).
 - Telemetry beyond the cgroup counters (for example a "99.6% RAM" snapshot): no telemetry collector exists yet.
