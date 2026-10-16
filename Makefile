@@ -6,7 +6,7 @@ else
   VPY := $(VENV)/bin/python
 endif
 
-.PHONY: setup test quick reproduce clean cfs-build cfs-up cfs-logs cfs-down
+.PHONY: setup test quick reproduce clean dataset cfs-build cfs-up cfs-logs cfs-down
 
 setup:
 	$(PYTHON) -m venv $(VENV)
@@ -16,6 +16,11 @@ setup:
 
 test:
 	@if [ -x "$(VPY)" ]; then $(VPY) -m pytest -q; else $(PYTHON) -m pytest -q; fi
+
+N ?= 30
+SEED ?= 0
+dataset:
+	@if [ -x "$(VPY)" ]; then $(VPY) -m orbitlog.build_dataset --n $(N) --seed $(SEED); else $(PYTHON) -m orbitlog.build_dataset --n $(N) --seed $(SEED); fi
 
 quick:
 	@echo "make quick: not yet implemented (target: 3 configs x 10 cases, <30 min on a laptop)."
