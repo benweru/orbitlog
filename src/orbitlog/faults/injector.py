@@ -10,6 +10,7 @@ from __future__ import annotations
 import json
 import os
 import random
+import warnings
 from abc import ABC, abstractmethod
 from datetime import datetime, timezone
 from pathlib import Path
@@ -107,7 +108,8 @@ def inject(fault_class: str, seed: int, out_dir: str | Path, before_cleanup=None
     before_cleanup(injector, out_dir), if given, runs after trigger/collect and
     BEFORE cleanup(), whether the trigger succeeded or failed. Log capture uses
     it to read a per-case container before the injector removes it. Its
-    exceptions are swallowed so they can never change the label.
+    exceptions are turned into a RuntimeWarning so they can never change the
+    label or skip cleanup().
     """
     out = Path(out_dir)
     out.mkdir(parents=True, exist_ok=True)
@@ -141,8 +143,9 @@ def inject(fault_class: str, seed: int, out_dir: str | Path, before_cleanup=None
         if before_cleanup is not None:
             try:
                 before_cleanup(inj, out)
-            except Exception:
-                pass
+            except Exception as e:
+                warnings.warn(f"before_cleanup failed for {fault_class}: {type(e).__name__}: {e}",
+                              RuntimeWarning, stacklevel=2)
         inj.cleanup()
 
 
