@@ -160,3 +160,4 @@ def inject(fault_class: str, seed: int, out_dir: str | Path, before_cleanup=None
 # Register the implemented classes.
 from orbitlog.faults import classes as _classes  # noqa: E402,F401
 from orbitlog.faults import cfs as _cfs  # noqa: E402,F401
+from orbitlog.faults import linux as _linux  # noqa: E402,F401

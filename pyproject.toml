@@ -23,4 +23,8 @@ where = ["src"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-markers = ["cfs: needs the orbitlog-cfs image and a running Docker daemon"]
+markers = [
+  "cfs: needs the orbitlog-cfs image and a running Docker daemon",
+  "docker: needs a running Docker daemon (pulls the pinned python image)",
+  "linux_i2c: needs a Linux host, root and the i2c-stub kernel module",
+]
