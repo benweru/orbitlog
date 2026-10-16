@@ -1,0 +1,12 @@
+
+OS_Posix_TaskAPI_Impl_Init():412:Could not setschedparam in main thread: Operation not permitted (1)
+1980-001-00:07:31.32215 CFE_ES_Main: CFE_ES_Main in EARLY_INIT state
+1980-001-00:07:31.32256 CFE_ES_Main: CFE_ES_Main entering CORE_STARTUP state
+EVS Port1 1980-012-14:03:20.05160 66/1/CFE_ES 1: cFE ES Initialized: CFE_ES v7.0.1+dev0 (Draco) v7.0.1 Official Release, EDS disabled
+EVS Port1 1980-012-14:03:20.05162 66/1/CFE_ES 2: cFS Versions: cfe v7.0.1+dev0, osal v7.0.1+dev0, psp v7.0.1+dev0. cFE chksm 34098
+EVS Port1 1980-012-14:03:20.05163 66/1/CFE_ES 91: Version Info: Mission SampleMission, version git:v7.0.1
+EVS Port1 1980-012-14:03:20.15083 66/1/CFE_EVS 1: cFE EVS Initialized: CFE_EVS v7.0.1+dev0 (Draco) v7.0.1 Official Release, EDS disabled
+EVS Port1 1980-012-14:03:20.25119 66/1/CFE_SB 1: cFE SB Initialized: CFE_SB v7.0.1+dev0 (Draco) v7.0.1 Official Release, EDS disabled
+1980-012-14:03:20.50197 CFE_ES_Main: CFE_ES_Main entering CORE_READY state
+1980-012-14:03:20.50202 CFE_ES_StartApplications: Opened ES App Startup file: /cf/cfe_es_startup.scr
+1980-012-14:03:20.60713 CFE_ES_Main: CFE_ES_Main entering OPERATIONAL state

@@ -44,3 +44,12 @@ cfs-logs:
 
 cfs-down:
 	docker rm -f orbitlog-cfs
+
+N ?= 30
+SEED ?= 0
+# Pure make (no shell syntax) so it also works with make on Windows/PowerShell.
+# Windows equivalent without make:  .venv\Scripts\python -m orbitlog.build_dataset --n 6 --seed 0
+DATASET_PY := $(if $(wildcard $(VPY) $(VPY).exe),$(VPY),$(PYTHON))
+.PHONY: dataset
+dataset:
+	$(DATASET_PY) -m orbitlog.build_dataset --n $(N) --seed $(SEED)

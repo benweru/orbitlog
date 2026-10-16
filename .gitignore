@@ -19,3 +19,5 @@ data/raw/
 data/interim/
 results/
 .env
+data/cases/
+data/manifest.jsonl
