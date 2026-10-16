@@ -4,6 +4,11 @@ inject() writes and fsyncs the ground-truth label BEFORE the fault is
 triggered, so labels are correct by construction. If triggering fails the
 label is kept and marked trigger_status: failed; labels are never rewritten
 after the fact except to record that status.
+
+Durability: label.json is fsynced, then os.replace()d into place, then its
+directory is fsynced so the rename survives a crash. On Windows the directory
+fsync is skipped, because os.open() cannot open a directory there; the file
+fsync still runs, but the rename is not guaranteed durable on Windows.
 """
 from __future__ import annotations
 
