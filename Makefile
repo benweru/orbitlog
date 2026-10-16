@@ -5,6 +5,9 @@ ifeq ($(OS),Windows_NT)
 else
   VPY := $(VENV)/bin/python
 endif
+# Pure make (no shell syntax) so recipes also work with make on Windows/PowerShell:
+# the venv python if it exists, otherwise $(PYTHON).
+RUN_PY := $(if $(wildcard $(VPY) $(VPY).exe),$(VPY),$(PYTHON))
 
 .PHONY: setup test test-cfs quick reproduce clean cfs-build cfs-up cfs-logs cfs-down
 
@@ -15,10 +18,10 @@ setup:
 	$(VPY) -m pip install -e .
 
 test:
-	@if [ -x "$(VPY)" ]; then $(VPY) -m pytest -q -m "not cfs and not docker and not linux_i2c"; else $(PYTHON) -m pytest -q -m "not cfs and not docker and not linux_i2c"; fi
+	$(RUN_PY) -m pytest -q -m "not cfs and not docker and not linux_i2c"
 
 test-cfs:
-	@if [ -x "$(VPY)" ]; then $(VPY) -m pytest -q -m cfs; else $(PYTHON) -m pytest -q -m cfs; fi
+	$(RUN_PY) -m pytest -q -m cfs
 
 quick:
 	@echo "make quick: not yet implemented (target: 3 configs x 10 cases, <30 min on a laptop)."
@@ -47,9 +50,7 @@ cfs-down:
 
 N ?= 30
 SEED ?= 0
-# Pure make (no shell syntax) so it also works with make on Windows/PowerShell.
 # Windows equivalent without make:  .venv\Scripts\python -m orbitlog.build_dataset --n 6 --seed 0
-DATASET_PY := $(if $(wildcard $(VPY) $(VPY).exe),$(VPY),$(PYTHON))
 .PHONY: dataset
 dataset:
-	$(DATASET_PY) -m orbitlog.build_dataset --n $(N) --seed $(SEED)
+	$(RUN_PY) -m orbitlog.build_dataset --n $(N) --seed $(SEED)
