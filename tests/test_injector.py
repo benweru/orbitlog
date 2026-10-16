@@ -141,3 +141,13 @@ def test_corrupt_input_end_to_end(seed, tmp_path):
     expected = {"truncate": ("truncated", "too short"), "bitflip": ("crc mismatch", "truncated"),
                 "bad_magic": ("bad magic",)}
     assert any(s in stderr for s in expected[label["injected_param"]["mode"]])
+
+
+def test_disk_full_without_dev_full_records_failed(tmp_path, monkeypatch):
+    from orbitlog.faults import classes
+    real = classes.os.path.exists
+    monkeypatch.setattr(classes.os.path, "exists", lambda p: False if p == "/dev/full" else real(p))
+    label = inject("disk_full", 0, tmp_path)
+    assert label["trigger_status"] == "failed"
+    assert "/dev/full not available" in label["trigger_error"]
+    assert load_label(tmp_path / "label.json")["trigger_status"] == "failed"

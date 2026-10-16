@@ -1,4 +1,5 @@
 import json
+import os
 import subprocess
 from pathlib import Path
 
@@ -7,9 +8,10 @@ import pytest
 
 from orbitlog import build_dataset as bd
 from orbitlog import capture
-from orbitlog.capture import ContainerLogCapture, parse_evs, parse_evs_line
+from orbitlog.capture import parse_evs, parse_evs_line
 from orbitlog.faults import injector as inj_mod
 
+HAS_DEV_FULL = os.path.exists("/dev/full")
 BOOT = (Path(__file__).parent / "fixtures" / "cfs_boot_pr3.log").read_text()
 
 
@@ -30,41 +32,86 @@ def test_parse_ignores_non_evs_and_strips_docker_timestamp():
     assert e["docker_ts"] == "2026-10-16T09:00:00.123456789Z" and e["app"] == "CFE_SB"
 
 
+# Real line from Ben's Windows machine (PR #6 image, table_load_validation, seed 1):
+# another app's progress "." arrived on the same line.
+REAL_TBL96 = (".EVS Port1 1980-012-14:03:25.90003 66/1/CFE_TBL 96: SAMPLE_APP validation failed "
+              "for SAMPLE_APP.ExampleTable 'inactive', Status=0xFFFFFFFF")
+# Real line from the PR #6 body (cfs_app_crash_restart, seed 1).
+REAL_ES10 = "EVS Port1 1980-012-14:03:26.75614 66/1/CFE_ES 10: Restart Application FAULT_APP Completed, AppID=1114134"
+
+
+def test_parse_evs_mid_line_real_tbl96():
+    e = parse_evs_line(REAL_TBL96)
+    assert (e["app"], e["event_id"]) == ("CFE_TBL", 96)
+    assert e["text"].startswith("SAMPLE_APP validation failed")
+    e = parse_evs_line("2026-10-16T12:34:48.530164253Z " + REAL_TBL96)
+    assert e["docker_ts"] == "2026-10-16T12:34:48.530164253Z" and e["event_id"] == 96
+
+
+def test_parse_real_es10():
+    e = parse_evs_line(REAL_ES10)
+    assert (e["app"], e["event_id"]) == ("CFE_ES", 10)
+    assert e["text"] == "Restart Application FAULT_APP Completed, AppID=1114134"
+
+
+class _Box:
+    def __init__(self, name):
+        self.name = name
+
+
+class _Inj:
+    def __init__(self, container=None):
+        self.container = container
+
+
+def _fake_docker(monkeypatch, text, rc=0, calls=None):
+    def fake_run(cmd, **kw):
+        if calls is not None:
+            calls.append(cmd)
+        return subprocess.CompletedProcess(cmd, rc, stdout=text if rc == 0 else "", stderr="" if rc == 0 else "boom")
+    monkeypatch.setattr(capture.shutil, "which", lambda x: "/usr/bin/docker")
+    monkeypatch.setattr(capture.subprocess, "run", fake_run)
+
+
 def test_capture_unavailable_writes_nothing(tmp_path, monkeypatch):
     monkeypatch.setattr(capture, "container_running", lambda name: False)
-    with ContainerLogCapture(tmp_path / "a") as cap:
-        pass
-    assert cap.status == "unavailable" and cap.files == []
+    meta = capture.capture(_Inj(), tmp_path / "a", capture.now_utc())
+    assert meta["capture"] == "unavailable" and meta["capture_source"] is None
     assert not (tmp_path / "a").exists()
-    assert cap.meta()["capture_start"] <= cap.meta()["capture_end"]
 
 
-def test_capture_saves_docker_logs_window(tmp_path, monkeypatch):
+def test_capture_prefers_case_container_and_never_overwrites(tmp_path, monkeypatch):
     calls = []
-
-    def fake_run(cmd, **kw):
-        calls.append(cmd)
-        return subprocess.CompletedProcess(cmd, 0, stdout=BOOT, stderr="")
-
+    _fake_docker(monkeypatch, BOOT + REAL_TBL96 + "\n", calls=calls)
     monkeypatch.setattr(capture, "container_running", lambda name: True)
-    monkeypatch.setattr(capture.subprocess, "run", fake_run)
-    with ContainerLogCapture(tmp_path / "a", name="orbitlog-cfs") as cap:
-        pass
+    adir = tmp_path / "a"
+    adir.mkdir()
+    (adir / "container.log").write_text("injector's own log")
+    meta = capture.capture(_Inj(_Box("orbitlog-cfs-table_load_validation-1")), adir, capture.now_utc())
+    assert calls == [["docker", "logs", "--timestamps", "orbitlog-cfs-table_load_validation-1"]]
+    assert meta["capture"] == "captured" and meta["capture_source"] == "case_container"
+    assert (adir / "container.log").read_text() == "injector's own log"
+    assert (adir / capture.CAPTURE_LOG).read_text() == BOOT + REAL_TBL96 + "\n"
+    evs = [json.loads(l) for l in (adir / "evs.jsonl").read_text().splitlines()]
+    assert len(evs) == 6 and (evs[-1]["app"], evs[-1]["event_id"]) == ("CFE_TBL", 96)
+
+
+def test_capture_shared_container_uses_window(tmp_path, monkeypatch):
+    calls = []
+    _fake_docker(monkeypatch, BOOT, calls=calls)
+    monkeypatch.setattr(capture, "container_running", lambda name: True)
+    start = capture.now_utc()
+    meta = capture.capture(_Inj(), tmp_path / "a", start)
     cmd = calls[0]
-    assert cmd[:3] == ["docker", "logs", "--timestamps"]
-    assert cmd[cmd.index("--since") + 1] == cap.start and cmd[cmd.index("--until") + 1] == cap.end
-    assert (tmp_path / "a" / "container.log").read_text() == BOOT
-    evs = [json.loads(l) for l in (tmp_path / "a" / "evs.jsonl").read_text().splitlines()]
-    assert len(evs) == 5 and cap.status == "captured"
+    assert cmd[-1] == "orbitlog-cfs" and cmd[cmd.index("--since") + 1] == start
+    assert cmd[cmd.index("--until") + 1] == meta["capture_end"]
+    assert meta["capture_source"] == "shared_container"
 
 
 def test_capture_error_is_recorded(tmp_path, monkeypatch):
-    monkeypatch.setattr(capture, "container_running", lambda name: True)
-    monkeypatch.setattr(capture.subprocess, "run",
-                        lambda cmd, **kw: subprocess.CompletedProcess(cmd, 1, "", "boom"))
-    with ContainerLogCapture(tmp_path / "a") as cap:
-        pass
-    assert cap.status == "error" and cap.meta()["capture_error"] == "boom"
+    _fake_docker(monkeypatch, "", rc=1)
+    meta = capture.capture(_Inj(_Box("x")), tmp_path / "a", capture.now_utc())
+    assert meta["capture"] == "error" and meta["capture_error"] == "boom"
     assert not (tmp_path / "a").exists()
 
 
@@ -103,7 +150,8 @@ def test_build_end_to_end_and_reproducible(tmp_path, no_docker):
     assert len(manifest) == 6
     for row in manifest:
         jsonschema.validate(row, bd.MANIFEST_SCHEMA)
-        assert row["trigger_status"] == "triggered" and row["capture"] == "unavailable"
+        expected = "triggered" if (row["fault_class"] != "disk_full" or HAS_DEV_FULL) else "failed"
+        assert row["trigger_status"] == expected and row["capture"] == "unavailable"
         case = tmp_path / "d1" / "cases" / row["case_id"]
         assert json.loads((case / "label.json").read_text())["seed"] == row["seed"]
         for a in row["artefacts"]:
@@ -142,3 +190,27 @@ def test_manifest_schema_rejects_bad_rows():
                 {**good, "artefacts": [{"path": "x", "sha256": "nothex", "bytes": 1}]}):
         with pytest.raises(jsonschema.ValidationError):
             jsonschema.validate(bad, bd.MANIFEST_SCHEMA)
+
+
+def test_capture_runs_before_cleanup_even_on_failed_trigger(tmp_path, no_docker, monkeypatch):
+    order = []
+
+    class _OwnContainer(_NeverTriggers):
+        def __init__(self, workdir):
+            super().__init__(workdir)
+            self.container = _Box("orbitlog-cfs-probe")
+
+        def cleanup(self):
+            order.append("cleanup")
+            self.container = None
+
+    def fake_capture(injector, adir, start, shared_name="orbitlog-cfs"):
+        order.append(("capture", capture.case_container_name(injector)))
+        return {"capture": "unavailable", "capture_start": start, "capture_end": start,
+                "capture_source": None, "container": None}
+
+    monkeypatch.setitem(inj_mod._REGISTRY, "watchdog_reset", _OwnContainer)
+    monkeypatch.setattr(bd.cap_mod, "capture", fake_capture)
+    rows = bd.build(1, 0, tmp_path, classes=["watchdog_reset"])
+    assert order == [("capture", "orbitlog-cfs-probe"), "cleanup"]
+    assert rows[0]["trigger_status"] == "failed"
