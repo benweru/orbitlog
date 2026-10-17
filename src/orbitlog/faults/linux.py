@@ -15,6 +15,7 @@ import re
 import shutil
 import subprocess
 import sys
+from collections import Counter
 from pathlib import Path
 
 from orbitlog.faults.injector import FaultInjector, register
@@ -97,6 +98,46 @@ def _dmesg() -> list[str]:
     return r.stdout.splitlines() if r.returncode == 0 else []
 
 
+_DMESG_TS = re.compile(r"^\[\s*(\d+\.\d+)\]")
+
+
+def _dmesg_ts(line: str) -> float | None:
+    m = _DMESG_TS.match(line)
+    return float(m.group(1)) if m else None
+
+
+def dmesg_new_lines(before: list[str], after: list[str]) -> list[str]:
+    """Lines in `after` that were logged after the `before` snapshot.
+
+    The kernel log is a fixed-size ring buffer: when it is full, old lines are
+    evicted as new ones arrive, so slicing by line count (`after[len(before):]`)
+    drops lines. dmesg stamps each line with a monotonic [seconds.microseconds]
+    time, so cut by that instead. Lines sharing the last pre-trigger timestamp
+    are kept only if they weren't in `before`; lines without a stamp follow the
+    line above them. Returns [] when `before` has no stamped line (dmesg failed).
+    """
+    stamps = [t for t in map(_dmesg_ts, before) if t is not None]
+    if not stamps:
+        return []
+    last = max(stamps)
+    seen_at_last = Counter(l for l in before if _dmesg_ts(l) == last)
+    out: list[str] = []
+    keep = False
+    for line in after:
+        t = _dmesg_ts(line)
+        if t is not None:
+            if t > last:
+                keep = True
+            elif t == last and seen_at_last[line] > 0:
+                seen_at_last[line] -= 1
+                keep = False
+            else:
+                keep = t == last
+        if keep:
+            out.append(line)
+    return out
+
+
 def find_stub_bus(sys_class: Path = Path("/sys/class/i2c-dev")) -> int | None:
     for name_file in sorted(sys_class.glob("i2c-*/name")):
         if name_file.read_text().strip() == I2C_STUB_NAME:
@@ -152,7 +193,7 @@ class I2cSensorNack(FaultInjector):
 
     def trigger(self) -> None:
         self._check_host()
-        before = len(_dmesg())
+        before = _dmesg()
         self._modprobe("i2c-dev")
         self._modprobe("i2c-stub", f"chip_addr={self.params['decoy_addr']}")
         self.loaded_stub = True
@@ -165,7 +206,7 @@ class I2cSensorNack(FaultInjector):
             [sys.executable, "-m", "orbitlog.faults.i2c_capture", "--bus", str(bus),
              "--addr", self.params["sensor_addr"], "--reg", self.params["reg"]],
             capture_output=True, text=True, env=env, timeout=30)
-        self.dmesg_window = _dmesg()[before:]
+        self.dmesg_window = dmesg_new_lines(before, _dmesg())
         if self.proc.returncode == 0 or "OSError" not in self.proc.stderr:
             raise RuntimeError(f"sensor read did not fail: exit {self.proc.returncode}")
 

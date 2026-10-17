@@ -52,11 +52,22 @@ tegra signature. Dataset consumers and any model evaluation must treat it as an 
 A real NACK (Errno 121 plus the kernel warning) needs a real controller driver and isn't available on a generic
 Linux host.
 
-### Known issue
+### `dmesg.txt` window (fixed, 17 Oct 2026)
 
-The `dmesg.txt` window is unreliable: it held 0 or 1 lines across seeds, and the count differed between two runs of the
-same seeds (a 3-seed print showed seed 2 with the `Virtual chip` line, the later 8-seed run showed it on seeds 1 and 6).
-Don't rely on `dmesg.txt` content until the window capture is fixed.
+The first runs above had a `dmesg.txt` that held 0 or 1 lines and differed between runs of the same seeds. The window was
+cut by line count, but the kernel log is a fixed-size ring buffer (256 KiB here): when it is full, old lines are evicted
+as new ones arrive and a count slice drops lines. A WSL2 VM shares one log with Docker Desktop, so it fills in a long
+session. The window is now cut by the `[seconds.microseconds]` timestamp (`dmesg_new_lines` in `faults/linux.py`).
+
+With the ring full and test noise written to `/dev/kmsg` while the fault runs, 8 seeds gave:
+
+```
+old code: seeds missing the 'Virtual chip' line = 8 of 8   (dmesg_lines: 2,2,2,1,2,2,2,2)
+new code: seeds missing the 'Virtual chip' line = 0 of 8   (dmesg_lines: 12,11,10,11,12,11,11,11)
+```
+
+The window is a time slice, so it also holds any unrelated kernel line logged during the trigger (the extra lines in the
+new-code run are the test noise).
 
 ## Building `i2c-stub` for the WSL2 kernel (no reboot, no admin)
 
@@ -77,6 +88,11 @@ mkdir -p /lib/modules/$(uname -r)/extra
 cp drivers/i2c/i2c-stub.ko drivers/i2c/i2c-dev.ko /lib/modules/$(uname -r)/extra/ && depmod -a
 modinfo drivers/i2c/i2c-stub.ko | grep vermagic   # must start with the output of: uname -r
 ```
+
+**Repeat the `mkdir`/`cp`/`depmod` lines after every WSL restart** (`wsl --shutdown`, a reboot, or an idle stop). On start
+WSL mounts its own modules disk over `/lib/modules/<kernel>`, which hides the copied `i2c-*.ko`; `modprobe` then reports
+`Module i2c-stub not found`. The built files stay in `WSL2-Linux-Kernel/drivers/i2c/`, so only the copy is needed again
+(no rebuild). Found 17 Oct 2026, after the VM restarted overnight.
 
 The modules are needed in full because `CONFIG_MODVERSIONS=y` requires the symbol checksums from a complete build.
 The `BPF: Invalid name_offset` / `BTF mismatch` messages when loading only affect debug info. Don't load the modules
