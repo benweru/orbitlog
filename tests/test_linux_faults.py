@@ -105,6 +105,44 @@ def test_i2c_enable_needs_linux_and_env(monkeypatch):
     assert linux.i2c_enabled()
 
 
+def _kl(t, text="msg"):
+    return f"[{t:12.6f}] {text}"
+
+
+def test_dmesg_new_lines_normal_growth():
+    before = [_kl(1.0, "a"), _kl(2.0, "b")]
+    after = before + [_kl(3.0, "c"), _kl(4.0, "d")]
+    assert linux.dmesg_new_lines(before, after) == [_kl(3.0, "c"), _kl(4.0, "d")]
+
+
+def test_dmesg_new_lines_survives_ring_eviction():
+    # The ring is full: two old lines were evicted while two new ones arrived,
+    # so the length is unchanged and a slice by line count would return [].
+    before = [_kl(1.0, "a"), _kl(2.0, "b"), _kl(3.0, "c")]
+    after = [_kl(3.0, "c"), _kl(4.0, "new1"), _kl(5.0, "new2")]
+    assert len(after) == len(before)
+    assert after[len(before):] == []
+    assert linux.dmesg_new_lines(before, after) == [_kl(4.0, "new1"), _kl(5.0, "new2")]
+
+
+def test_dmesg_new_lines_equal_timestamps():
+    before = [_kl(1.0, "a"), _kl(2.0, "same")]
+    after = [_kl(2.0, "same"), _kl(2.0, "late line, same stamp"), _kl(3.0, "c")]
+    assert linux.dmesg_new_lines(before, after) == [_kl(2.0, "late line, same stamp"), _kl(3.0, "c")]
+
+
+def test_dmesg_new_lines_keeps_continuation_lines():
+    before = [_kl(1.0, "a")]
+    after = [_kl(1.0, "a"), _kl(2.0, "Call trace:"), "  frame one", "  frame two", _kl(3.0, "d")]
+    assert linux.dmesg_new_lines(before, after) == [_kl(2.0, "Call trace:"), "  frame one", "  frame two", _kl(3.0, "d")]
+
+
+def test_dmesg_new_lines_nothing_new_and_empty_before():
+    before = [_kl(1.0, "a"), "  continuation"]
+    assert linux.dmesg_new_lines(before, list(before)) == []
+    assert linux.dmesg_new_lines([], [_kl(1.0, "a")]) == []
+
+
 @pytest.mark.linux_i2c
 def test_i2c_live(tmp_path):
     # As root on Linux with i2c-stub:  ORBITLOG_ENABLE_I2C_STUB=1 pytest -m linux_i2c
@@ -113,3 +151,5 @@ def test_i2c_live(tmp_path):
     label = inject("i2c_sensor_nack", 0, tmp_path)
     assert label["trigger_status"] == "triggered", label
     assert "OSError" in (tmp_path / "artefacts" / "stderr.txt").read_text()
+    decoy = label["injected_param"]["decoy_addr"]
+    assert f"i2c-stub: Virtual chip at {decoy}" in (tmp_path / "artefacts" / "dmesg.txt").read_text()
