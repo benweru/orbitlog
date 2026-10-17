@@ -15,7 +15,7 @@ Two more registered fault classes (ids 1 and 2 in `configs/fault_classes.yaml`) 
   - **Sensor:** "a kernel warning: tegra-i2c 3180000.i2c: no acknowledge from address 0x36 and an OSError: [Errno 121] Remote I/O error triggered during a scheduled camera payload capture". Target hardware is a Jetson Orin Nano.
 - **What this machine supports** (probed 16 Oct 2026, Windows 11 + Docker Desktop, VM kernel `6.6.87.2-microsoft-standard-WSL2`):
   - cgroup v2 memory caps work. With `--memory=64m --memory-swap=64m`, a 12000×12000×1 allocation got exit 137 with `oom_kill 1` in `memory.events`. Under `ulimit -v 98304` it raised `MemoryError` at `bytearray(n)`.
-  - The kernel config has `CONFIG_I2C=y` and `CONFIG_I2C_CHARDEV=m`, but **no `CONFIG_I2C_STUB`**, and containers have no `/lib/modules`. **So `i2c_sensor_nack` cannot be triggered here.** It needs a Linux host with the `i2c-stub` module (for example the Pi in plan §9).
+  - The kernel config has `CONFIG_I2C=y` and `CONFIG_I2C_CHARDEV=m`, but **no `CONFIG_I2C_STUB`**, and containers have no `/lib/modules`. **So `i2c_sensor_nack` cannot be triggered in Docker here.** It needs a Linux host with the `i2c-stub` module. *Update 17 Oct 2026:* it was triggered for real in WSL2 after building the module for the running kernel (8 of 8 seeds, Errno 19, not the article's Errno 121). See [docs/linux-fault-hosts.md](../linux-fault-hosts.md). A Pi isn't needed for this.
 - Kernel interfaces: `i2c-stub` takes `chip_addr` (up to 10) and answers SMBus commands only at those addresses (https://docs.kernel.org/i2c/i2c-stub.html). `/dev/i2c-N` needs `i2c-dev`, with `ioctl(I2C_SLAVE, addr)` then SMBus transfers via `I2C_SMBUS` (https://docs.kernel.org/i2c/dev-interface.html).
 - No OpenCV dependency: the loader is stdlib Python, so the error text is Python's `MemoryError` or a kernel OOM kill, not OpenCV's `OutOfMemoryError`. That difference is stated, not hidden.
 
@@ -35,7 +35,7 @@ Two more registered fault classes (ids 1 and 2 in `configs/fault_classes.yaml`) 
 
 ## Acceptance criteria
 - [ ] Real OOM trigger output for both modes pasted into the PR, with the hardware and kernel fingerprint.
-- [ ] `i2c_sensor_nack` either has real trigger output from a Linux host with `i2c-stub`, or the PR states plainly that it hasn't run anywhere yet.
+- [x] `i2c_sensor_nack` either has real trigger output from a Linux host with `i2c-stub`, or the PR states plainly that it hasn't run anywhere yet. Real output is in [docs/linux-fault-hosts.md](../linux-fault-hosts.md). Still opt-in, and its signature differs from the article's (Errno 19, no kernel NACK line).
 - [ ] `make test` passes. Nothing synthetic is written as log text.
 
 ## Out of scope
