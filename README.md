@@ -45,6 +45,7 @@ src/orbitlog/eval.py             accuracy scoring, Wilson CIs
 src/orbitlog/memory.py           cgroup v2 memory measurement
 configs/fault_classes.yaml       the 15 fault classes
 docker/cfs/Dockerfile            cFS image (placeholder)
+web/                             isolated Vite + React app (orbits; no Node needed for make test)
 docs/plan.md                     full project plan
 ```
 

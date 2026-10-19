@@ -9,7 +9,7 @@ endif
 # the venv python if it exists, otherwise $(PYTHON).
 RUN_PY := $(if $(wildcard $(VPY) $(VPY).exe),$(VPY),$(PYTHON))
 
-.PHONY: setup test test-cfs quick reproduce clean cfs-build cfs-up cfs-logs cfs-down
+.PHONY: setup test test-cfs test-web quick reproduce clean cfs-build cfs-up cfs-logs cfs-down
 
 setup:
 	$(PYTHON) -m venv $(VENV)
@@ -22,6 +22,10 @@ test:
 
 test-cfs:
 	$(RUN_PY) -m pytest -q -m cfs
+
+# Node tests for web/. Not part of make test; the Python benchmark must not need Node.
+test-web:
+	npm --prefix web test
 
 quick:
 	@echo "make quick: not yet implemented (target: 3 configs x 10 cases, <30 min on a laptop)."
