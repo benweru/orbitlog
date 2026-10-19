@@ -74,7 +74,7 @@ Work is organized in titled sprints. Ben approves each title in chat, and the ag
 | 1: Memory harness and cFS bring-up *(title pending Ben's approval)* | Set up llama.cpp, run E2B Q4_0, build the cgroup memory harness, check the [verify] items | `bench/` harness that measures memory.peak |
 | 2: cFS fault injection and log capture *(title pending Ben's approval)* | cFS in Docker, injector for 5 classes, JSON schema | first 40 cases; Baseline B measured; preregistration committed |
 | 3: Linux-side fault injection | Linux-side and remaining fault classes, toward all 15 | registered classes with real triggers |
-| 4: Dataset v1, noise and split *(title pending Ben's approval)* | Distractor noise, seed split, no-fault cases; second-reviewer check | dataset v1 (≥110 cases) |
+| 4: Dataset v1, noise and split (approved by Ben) | Distractor noise, seed split, no-fault cases; second-reviewer check | dataset v1 (≥110 cases) |
 | 5: Quantization grid *(title pending Ben's approval)* | Quantization grid (Q4→IQ2, imatrix, KV, PLE mmap) | first curve |
 | 6: Layer-pruning sweep *(title pending Ben's approval)* | Layer-pruning sweep | curve v2 |
 | 7: Distillation and LoRA fine-tuning *(title pending Ben's approval)* | Distillation into 270M + LoRA on E2B (Colab/Kaggle) | fine-tuned GGUFs |
