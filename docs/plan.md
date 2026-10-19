@@ -85,6 +85,17 @@ Work is organized in titled sprints. Ben approves each title in chat, and the ag
 
 The old weeks 3–4 ("All 15 classes, noise, split; second-reviewer check") are split into Sprints 3 and 4. Later phases are renumbered one per sprint.
 
+### Web v1 (parallel track)
+
+Interactive globe in `web/`. It is independent of the Python benchmark: `make test` and `make reproduce` must not require Node. **v2** (onboard diagnosis story) starts only after committed files exist in `results/`. Sprint titles below are *(title pending Ben's approval)*.
+
+| Sprint | Work | Deliverable |
+|---|---|---|
+| 12: Isolated Vite globe shell *(title pending Ben's approval)* | `web/` Vite + React + TypeScript + Vitest; CI job; no Python coupling | `cd web && npm install && npm run dev` and `npm test` |
+| 13: TLE cache and SGP4 *(title pending Ben's approval)* | Fetch CelesTrak GP TLEs, cache with fetch time, propagate with `satellite.js` | Unit-tested TLE parse + ECI/ECF position |
+| 14: Nairobi contact windows *(title pending Ben's approval)* | Look angles, elevation mask, next-pass countdown | Rise / max elevation / set for Nairobi, tested |
+| 15: Live globe, picker and credits *(title pending Ben's approval)* | CesiumJS globe, moving sat, highlighted next pass, picker, credits; Heavens-Above/N2YO check | v1 acceptance: moving satellite, pass times within ~1 min of an independent source |
+
 ## 9. Hardware and costs (approximate; check local prices)
 - Laptop he already owns (development and the main grid): KES 0.
 - Raspberry Pi 5 (8 GB, so the cap is enforced in software) + NVMe/SD + PSU: about USD 120–150 **[verify the Nairobi price]**.
