@@ -21,8 +21,8 @@ From the repo root, `make test-web` runs `npm test` here. It is not part of
 ## Sprints
 
 - 12: scaffold
-- 13: CelesTrak TLEs + SGP4 (this branch)
-- 14: Nairobi contact windows
+- 13: CelesTrak TLEs + SGP4
+- 14: Nairobi contact windows (this branch)
 - 15: Cesium globe, picker, credits, Heavens-Above/N2YO check
 
 `npm run dev` proxies `/api/celestrak` to CelesTrak so the browser can fetch

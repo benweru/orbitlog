@@ -54,6 +54,45 @@ p {
   border-top: 1px solid #2a2e35;
 }
 
+.sats li.active {
+  background: #1a1d22;
+}
+
+.pick {
+  text-align: left;
+  background: none;
+  border: 0;
+  color: inherit;
+  padding: 0;
+  cursor: pointer;
+}
+
+dl {
+  display: grid;
+  grid-template-columns: 10rem 1fr;
+  gap: 0.35rem 1rem;
+  margin: 0;
+}
+
+dt {
+  color: #9aa0a6;
+}
+
+dd {
+  margin: 0;
+}
+
+.pass h2 {
+  font-size: 1rem;
+  font-weight: 600;
+  margin: 0 0 0.75rem;
+}
+
+.pass {
+  margin: 0 0 1.5rem;
+  padding-top: 0.5rem;
+}
+
 .sats li .meta {
   grid-column: 1;
   font-size: 0.85rem;
