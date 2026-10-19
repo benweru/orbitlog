@@ -21,3 +21,6 @@ results/
 .env
 data/cases/
 data/manifest.jsonl
+# web app (Node lives only under web/)
+web/node_modules/
+web/dist/
