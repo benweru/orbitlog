@@ -20,7 +20,10 @@ From the repo root, `make test-web` runs `npm test` here. It is not part of
 
 ## Sprints
 
-- 12: this scaffold
-- 13: CelesTrak TLEs + SGP4
+- 12: scaffold
+- 13: CelesTrak TLEs + SGP4 (this branch)
 - 14: Nairobi contact windows
 - 15: Cesium globe, picker, credits, Heavens-Above/N2YO check
+
+`npm run dev` proxies `/api/celestrak` to CelesTrak so the browser can fetch
+TLEs. Tests use a committed ISS fixture and never hit the network.

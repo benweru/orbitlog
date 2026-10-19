@@ -39,6 +39,46 @@ p {
   color: #c4c7cc;
 }
 
+.sats {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 1.25rem;
+}
+
+.sats li {
+  display: grid;
+  gap: 0.25rem 1rem;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  padding: 0.75rem 0;
+  border-top: 1px solid #2a2e35;
+}
+
+.sats li .meta {
+  grid-column: 1;
+  font-size: 0.85rem;
+  color: #9aa0a6;
+}
+
+.sats button {
+  grid-column: 2;
+  grid-row: 1 / span 2;
+  background: #1f232a;
+  color: #e8eaed;
+  border: 1px solid #3c424c;
+  padding: 0.4rem 0.7rem;
+  cursor: pointer;
+}
+
+.sats button:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.error {
+  color: #f3aeae;
+}
+
 .note {
   font-size: 0.9rem;
   color: #9aa0a6;
