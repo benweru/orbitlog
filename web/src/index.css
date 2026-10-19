@@ -9,14 +9,38 @@
   box-sizing: border-box;
 }
 
+html,
+body,
+#root {
+  height: 100%;
+}
+
 body {
   margin: 0;
 }
 
-main {
-  max-width: 40rem;
-  margin: 0 auto;
-  padding: 3rem 1.25rem;
+.shell {
+  position: relative;
+  height: 100%;
+  overflow: hidden;
+}
+
+.globe {
+  position: absolute;
+  inset: 0;
+}
+
+.hud {
+  position: absolute;
+  z-index: 1;
+  top: 1rem;
+  left: 1rem;
+  width: min(24rem, calc(100% - 2rem));
+  max-height: calc(100% - 2rem);
+  overflow: auto;
+  padding: 1rem 1.1rem;
+  background: #111318f2;
+  border: 1px solid #2a2e35;
 }
 
 .kicker {
@@ -28,7 +52,7 @@ main {
 }
 
 h1 {
-  font-size: 1.75rem;
+  font-size: 1.35rem;
   font-weight: 600;
   line-height: 1.25;
   margin: 0 0 1rem;

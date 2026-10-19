@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import Globe from "./Globe";
 import { tleCache, type CachedTle } from "./orbit/cache";
 import { SATELLITES } from "./orbit/catalog";
 import { countdownSeconds, formatCountdown } from "./orbit/countdown";
@@ -28,6 +29,9 @@ export default function App() {
       }
     }
     setCached(next);
+    if (!next[SATELLITES[0].catnr]) {
+      void load(SATELLITES[0].catnr);
+    }
   }, []);
 
   useEffect(() => {
@@ -50,6 +54,7 @@ export default function App() {
   }
 
   const tle = cached[selected];
+  const sat = SATELLITES.find((s) => s.catnr === selected) ?? SATELLITES[0];
   const passBucket = Math.floor(now.getTime() / 15_000);
   const pass: Pass | null = useMemo(() => {
     if (!tle) {
@@ -64,79 +69,78 @@ export default function App() {
     now.getTime() < pass.set.getTime();
 
   return (
-    <main>
-      <p className="kicker">OrbitLog</p>
-      <h1>Ride along with a real satellite and watch it think.</h1>
-      <p>
-        A <strong>contact window</strong> is the few minutes a satellite is
-        above {DEFAULT_ELEVATION_MASK_DEG}° elevation at {NAIROBI.name}.{" "}
-        <strong>Look angles</strong> are azimuth (compass direction) and
-        elevation (angle above the horizon). The globe comes next.
-      </p>
-      <ul className="sats">
-        {SATELLITES.map((sat) => {
-          const hit = cached[sat.catnr];
-          const active = sat.catnr === selected;
-          return (
-            <li key={sat.catnr} className={active ? "active" : undefined}>
-              <button
-                type="button"
-                className="pick"
-                onClick={() => setSelected(sat.catnr)}
-              >
-                {sat.name} <code>CATNR {sat.catnr}</code>
-              </button>
-              <span className="meta">
-                {hit ? `TLE fetched ${hit.fetchedAt}` : "TLE not fetched"}
-              </span>
-              <button
-                type="button"
-                disabled={busy === sat.catnr}
-                onClick={() => void load(sat.catnr)}
-              >
-                {busy === sat.catnr ? "Fetching…" : "Fetch TLE"}
-              </button>
-            </li>
-          );
-        })}
-      </ul>
-      {error ? <p className="error">{error}</p> : null}
-      <section className="pass" aria-live="polite">
-        <h2>
-          Next pass over {NAIROBI.name} (mask {DEFAULT_ELEVATION_MASK_DEG}°)
-        </h2>
-        {!tle ? (
-          <p>Fetch a TLE to predict the next window.</p>
-        ) : !pass ? (
-          <p>No pass in the next 36 hours for this TLE.</p>
-        ) : (
-          <dl>
-            <dt>Countdown</dt>
-            <dd>
-              {inPass
-                ? `In contact · sets in ${formatCountdown(countdownSeconds(pass.set, now))}`
-                : formatCountdown(countdownSeconds(pass.rise, now))}
-            </dd>
-            <dt>Rise</dt>
-            <dd>{utc(pass.rise)}</dd>
-            <dt>Max elevation</dt>
-            <dd>
-              {pass.maxElDeg.toFixed(1)}° at {utc(pass.maxElAt)}
-            </dd>
-            <dt>Set</dt>
-            <dd>{utc(pass.set)}</dd>
-          </dl>
-        )}
-      </section>
-      <p>
-        v2, the onboard diagnosis story, is <strong>{V2_STATUS}</strong> until
-        the benchmark writes files under <code>results/</code>. This page will
-        never invent those numbers.
-      </p>
-      <p className="note">
-        Faults in OrbitLog are simulated on a ground Linux box, not live
-        satellite telemetry. TLE data: CelesTrak.
-      </p>
-    </main>
+    <div className="shell">
+      <Globe name={sat.name} tle={tle ?? null} pass={pass} />
+      <aside className="hud">
+        <p className="kicker">OrbitLog</p>
+        <h1>Ride along with a real satellite.</h1>
+        <p>
+          A <strong>contact window</strong> is the few minutes a satellite is
+          above {DEFAULT_ELEVATION_MASK_DEG}° elevation at {NAIROBI.name}. The
+          yellow arc is that window. Diagnosis UI is{" "}
+          <strong>{V2_STATUS}</strong>.
+        </p>
+        <ul className="sats">
+          {SATELLITES.map((item) => {
+            const hit = cached[item.catnr];
+            const active = item.catnr === selected;
+            return (
+              <li key={item.catnr} className={active ? "active" : undefined}>
+                <button
+                  type="button"
+                  className="pick"
+                  onClick={() => setSelected(item.catnr)}
+                >
+                  {item.name} <code>{item.catnr}</code>
+                </button>
+                <span className="meta">
+                  {hit ? `TLE ${hit.fetchedAt}` : "TLE not fetched"}
+                </span>
+                <button
+                  type="button"
+                  disabled={busy === item.catnr}
+                  onClick={() => void load(item.catnr)}
+                >
+                  {busy === item.catnr ? "Fetching…" : "Fetch TLE"}
+                </button>
+              </li>
+            );
+          })}
+        </ul>
+        {error ? <p className="error">{error}</p> : null}
+        <section className="pass" aria-live="polite">
+          <h2>
+            Next pass · {NAIROBI.name} · mask {DEFAULT_ELEVATION_MASK_DEG}°
+          </h2>
+          {!tle ? (
+            <p>Fetching a TLE…</p>
+          ) : !pass ? (
+            <p>No pass in the next 36 hours for this TLE.</p>
+          ) : (
+            <dl>
+              <dt>Countdown</dt>
+              <dd>
+                {inPass
+                  ? `In contact · sets in ${formatCountdown(countdownSeconds(pass.set, now))}`
+                  : formatCountdown(countdownSeconds(pass.rise, now))}
+              </dd>
+              <dt>Rise</dt>
+              <dd>{utc(pass.rise)}</dd>
+              <dt>Max elevation</dt>
+              <dd>
+                {pass.maxElDeg.toFixed(1)}° at {utc(pass.maxElAt)}
+              </dd>
+              <dt>Set</dt>
+              <dd>{utc(pass.set)}</dd>
+            </dl>
+          )}
+        </section>
+        <p className="note">
+          Simulated ground faults, not live telemetry. Map tiles: OpenStreetMap.
+          Orbits: CelesTrak TLEs + SGP4 (satellite.js). Globe: CesiumJS. Inspired
+          by Skyhitch / God&apos;s Eye View (MIT), not a copy of their code.
+        </p>
+      </aside>
+    </div>
   );
 }
